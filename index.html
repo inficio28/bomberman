@@ -438,21 +438,23 @@ window.addEventListener("load", function() {
 
   try { var p=localStorage.getItem("bom_p"); if(p) document.getElementById("inp-pseudo").value=p; } catch(e){}
 
-  document.getElementById("btn-creer").addEventListener("click", creerSalle);
-  document.getElementById("btn-refresh").addEventListener("click", chargerSalles);
-  document.getElementById("btn-launch").addEventListener("click", lancerPartie);
-  document.getElementById("btn-quit-wait").addEventListener("click", quitterSalle);
-  document.getElementById("btn-chat-send").addEventListener("click", envoyerChat);
-  document.getElementById("btn-menu-ov").addEventListener("click", retourMenu);
-  document.getElementById("btn-menu-res").addEventListener("click", retourMenu);
-  document.getElementById("btn-rejouer").addEventListener("click", rejouer);
-  document.getElementById("btn-quit-game").addEventListener("click", function(){
+  function on(id, ev, fn){ var el=document.getElementById(id); if(el) el.addEventListener(ev,fn); }
+
+  on("btn-creer",    "click", creerSalle);
+  on("btn-refresh",  "click", chargerSalles);
+  on("btn-launch",   "click", lancerPartie);
+  on("btn-quit-wait","click", quitterSalle);
+  on("btn-chat-send","click", envoyerChat);
+  on("btn-menu-ov",  "click", retourMenu);
+  on("btn-menu-res", "click", retourMenu);
+  on("btn-rejouer",  "click", rejouer);
+  on("btn-quit-game","click", function(){
     if(confirm("Quitter la partie en cours ?")){
       broadcastEvent("player_leave",{id:myId,pseudo:myPseudo});
       retourMenu();
     }
   });
-  document.getElementById("chat-inp").addEventListener("keydown", function(e){ if(e.key==="Enter") envoyerChat(); });
+  on("chat-inp","keydown", function(e){ if(e.key==="Enter") envoyerChat(); });
 
   var km={ArrowUp:"up",ArrowDown:"down",ArrowLeft:"left",ArrowRight:"right",z:"up",s:"down",q:"left",d:"right",Z:"up",S:"down",Q:"left",D:"right"," ":"bomb"};
   function isTyping(){ var t=document.activeElement; return t&&(t.tagName==="INPUT"||t.tagName==="TEXTAREA"); }
@@ -728,7 +730,7 @@ function creerSalle(){
   document.getElementById("code-display").textContent=roomName;
   showScreen("screen-waiting"); renderWaitingRoom();
   if(db) subscribeRoom(roomCode);
-  if(db) db.from("bomberman_rooms").upsert({code:roomCode,host_id:myId,status:"waiting",name:roomName,players:JSON.stringify(waitingPlayers),created_at:new Date().toISOString(),updated_at:new Date().toISOString()}).then(function(){}).catch(function(){});
+  if(db) db.from("bomberman_rooms").upsert({code:roomCode,host_id:myId,status:"waiting",name:roomName,players:JSON.stringify(waitingPlayers),created_at:new Date().toISOString(),updated_at:new Date().toISOString()}).then(function(r){ if(r.error) console.warn("upsert room:",r.error.message); }).catch(function(e){ console.warn("upsert room:",e); });
   addChat(roomName+" creee","system");
 }
 
@@ -850,7 +852,8 @@ function rejouer(){
     toast("En attente de l'hôte...","");
     showScreen("screen-game");
   }
-}{ var inp=document.getElementById("chat-inp"),msg=inp.value.trim(); if(!msg) return; broadcastEvent("chat",{pseudo:myPseudo,msg:msg}); addChat(myPseudo+": "+msg,"player"); inp.value=""; }
+}
+function envoyerChat(){ var inp=document.getElementById("chat-inp"),msg=inp.value.trim(); if(!msg) return; broadcastEvent("chat",{pseudo:myPseudo,msg:msg}); addChat(myPseudo+": "+msg,"player"); inp.value=""; }
 function addChat(text,type){ var el=document.getElementById("chat-msgs"); if(!el) return; var d=document.createElement("div"); d.className="cm-"+(type||"player"); d.textContent=text; el.appendChild(d); el.scrollTop=el.scrollHeight; }
 function showScreen(id){ document.querySelectorAll(".screen").forEach(function(s){s.classList.remove("active");}); document.getElementById(id).classList.add("active"); if(id==="screen-game"){ document.body.classList.add("in-game"); resizeCanvas(); } else { document.body.classList.remove("in-game"); } }
 function retourMenu(){ if(gameLoop){clearInterval(gameLoop);gameLoop=null;} if(timerInterval){clearInterval(timerInterval);timerInterval=null;} if(channel){try{channel.unsubscribe();}catch(e){} channel=null;} gs={map:[],players:{},bombs:[],explosions:[],powerups:[],running:false,timeLeft:GAME_DURATION}; keys={up:false,down:false,left:false,right:false,bomb:false}; isHost=false; roomCode=""; waitingPlayers={}; document.getElementById("game-overlay").classList.remove("show"); chargerSalles(); showScreen("screen-menu"); }
