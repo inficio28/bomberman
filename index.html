@@ -1137,10 +1137,24 @@ function subscribeRoom(code) {
   });
 
   channel
+    // Quelqu'un rejoint : tout le monde met à jour sa liste
     .on('broadcast',{event:'player_join'}, ({payload}) => {
       waitingPlayers[payload.id] = payload;
       renderWaitingRoom();
       addChat(`${payload.pseudo} a rejoint la salle`, 'system');
+      // L'hôte renvoie immédiatement la liste complète à tout le monde
+      if(isHost) {
+        setTimeout(() => broadcastEvent('room_sync', { players: waitingPlayers }), 200);
+      }
+    })
+    // L'hôte envoie la liste complète (réponse au player_join)
+    .on('broadcast',{event:'room_sync'}, ({payload}) => {
+      if(!isHost) {
+        Object.entries(payload.players).forEach(([id, p]) => {
+          waitingPlayers[id] = p;
+        });
+        renderWaitingRoom();
+      }
     })
     .on('broadcast',{event:'player_leave'}, ({payload}) => {
       delete waitingPlayers[payload.id];
@@ -1151,9 +1165,7 @@ function subscribeRoom(code) {
       addChat(`${payload.pseudo}: ${payload.msg}`, 'player');
     })
     .on('broadcast',{event:'game_start'}, ({payload}) => {
-      // Receive initial game state
       gs = payload.gs;
-      // Re-schedule bomb timers locally
       gs.bombs.forEach(b => {
         const remaining = b.timer - (Date.now() - b.placedAt);
         if(remaining>0) setTimeout(()=>explodeBomb(b.id), remaining);
@@ -1164,7 +1176,6 @@ function subscribeRoom(code) {
     })
     .on('broadcast',{event:'game_state'}, ({payload}) => {
       if(!isHost) {
-        // Merge state from host
         gs.players = payload.players;
         gs.bombs = payload.bombs;
         gs.explosions = payload.explosions;
@@ -1186,7 +1197,12 @@ function subscribeRoom(code) {
       gs.running=false;
       endGame(payload.winner);
     })
-    .subscribe();
+    .subscribe(async (status) => {
+      // Dès que le canal est prêt, annoncer sa présence
+      if(status === 'SUBSCRIBED') {
+        broadcastEvent('player_join', {id:myId, pseudo:myPseudo, avatar:myAvatar});
+      }
+    });
 }
 
 function broadcastEvent(event, payload) {
@@ -1251,15 +1267,14 @@ function creerSalle() {
   myAvatar = document.getElementById('inp-avatar').value;
   try { localStorage.setItem('bom_pseudo', myPseudo); } catch(e){}
   roomCode = generateCode();
-  isHost = true;
+  isHost = true;                          // ← DOIT être avant renderWaitingRoom
   waitingPlayers = {};
   waitingPlayers[myId] = {id:myId, pseudo:myPseudo, avatar:myAvatar};
   document.getElementById('display-code').textContent = roomCode;
+  showScreen('screen-waiting');
+  renderWaitingRoom();                    // ← maintenant isHost=true, bouton visible
   subscribeRoom(roomCode);
   creerSalleDB(roomCode);
-  renderWaitingRoom();
-  showScreen('screen-waiting');
-  broadcastEvent('player_join', {id:myId, pseudo:myPseudo, avatar:myAvatar});
   addChat(`Tu as créé la salle ${roomCode}`, 'system');
 }
 
@@ -1278,7 +1293,7 @@ function rejoindreCode(code) {
   waitingPlayers[myId] = {id:myId, pseudo:myPseudo, avatar:myAvatar};
   document.getElementById('display-code').textContent = roomCode;
   subscribeRoom(roomCode);
-  broadcastEvent('player_join', {id:myId, pseudo:myPseudo, avatar:myAvatar});
+  // player_join est envoyé automatiquement dans le callback SUBSCRIBED
   renderWaitingRoom();
   showScreen('screen-waiting');
   addChat(`Tu as rejoint la salle ${roomCode}`, 'system');
@@ -1313,27 +1328,22 @@ function renderWaitingRoom() {
 }
 
 function lancerPartie() {
-  if(!isHost) return;
+  console.log('[Bomberman] lancerPartie appelé, isHost=', isHost, 'joueurs=', Object.keys(waitingPlayers));
+  if(!isHost) { toast('Seul l'hôte peut lancer la partie', 'error'); return; }
 
   // Si seul, ajouter un bot pour tester
   const count = Object.keys(waitingPlayers).length;
   if(count < 2) {
     const botId = 'bot_' + Math.random().toString(36).slice(2,6);
-    waitingPlayers[botId] = {id:botId, pseudo:'BOT 🤖', avatar:'🤖'};
+    waitingPlayers[botId] = {id:botId, pseudo:'BOT', avatar:'🤖'};
   }
 
   initGame(waitingPlayers);
-
-  // Attendre que le channel soit prêt avant de broadcaster
-  const doLaunch = () => {
-    broadcastEvent('game_start', { gs });
-    if(db) db.from('bomberman_rooms').update({status:'playing'}).eq('code',roomCode).catch(()=>{});
-    showScreen('screen-game');
-    startGameLoop();
-  };
-
-  // Petit délai pour s'assurer que le channel est abonné
-  setTimeout(doLaunch, 300);
+  broadcastEvent('game_start', { gs });
+  if(db) db.from('bomberman_rooms').update({status:'playing'}).eq('code',roomCode).catch(()=>{});
+  showScreen('screen-game');
+  startGameLoop();
+  console.log('[Bomberman] Partie lancée !');
 }
 
 function quitterSalle() {
