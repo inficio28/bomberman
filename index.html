@@ -498,7 +498,7 @@ body::before {
     <div style="font-size:0.38rem;color:#666;margin-bottom:8px">Partage ce code avec tes amis !</div>
     <div class="players-grid" id="players-grid"></div>
     <div id="waiting-status" style="font-size:0.42rem;color:#555;margin:8px 0">En attente de joueurs... (min. 2)</div>
-    <button class="btn btn-success" id="btn-launch" onclick="lancerPartie()" disabled style="margin-top:10px">▶ LANCER LA PARTIE</button>
+    <button class="btn btn-success" id="btn-launch" onclick="lancerPartie()" style="margin-top:10px">▶ LANCER LA PARTIE</button>
     <button class="btn btn-danger" onclick="quitterSalle()" style="margin-top:6px">✖ QUITTER</button>
   </div>
   <div class="chat-box" style="max-width:560px;margin-top:12px">
@@ -1297,12 +1297,15 @@ function renderWaitingRoom() {
 
   const count = pls.length;
   document.getElementById('waiting-status').textContent =
-    `${count} joueur${count>1?'s':''} connecté${count>1?'s':''}`;
+    count < 2
+      ? `${count} joueur connecté — double-clique sur LANCER pour jouer seul`
+      : `${count} joueur${count>1?'s':''} connecté${count>1?'s':''}`;
 
   const btn = document.getElementById('btn-launch');
   if(isHost) {
-    btn.disabled = count < 2;
+    btn.disabled = false; // toujours actif pour l'hôte
     btn.style.display='block';
+    btn.textContent = count >= 2 ? '▶ LANCER LA PARTIE' : '▶ LANCER (SOLO TEST)';
   } else {
     btn.style.display='none';
   }
@@ -1311,12 +1314,26 @@ function renderWaitingRoom() {
 
 function lancerPartie() {
   if(!isHost) return;
+
+  // Si seul, ajouter un bot pour tester
+  const count = Object.keys(waitingPlayers).length;
+  if(count < 2) {
+    const botId = 'bot_' + Math.random().toString(36).slice(2,6);
+    waitingPlayers[botId] = {id:botId, pseudo:'BOT 🤖', avatar:'🤖'};
+  }
+
   initGame(waitingPlayers);
-  broadcastEvent('game_start', { gs });
-  // Update room status
-  if(db) db.from('bomberman_rooms').update({status:'playing'}).eq('code',roomCode).catch(()=>{});
-  showScreen('screen-game');
-  startGameLoop();
+
+  // Attendre que le channel soit prêt avant de broadcaster
+  const doLaunch = () => {
+    broadcastEvent('game_start', { gs });
+    if(db) db.from('bomberman_rooms').update({status:'playing'}).eq('code',roomCode).catch(()=>{});
+    showScreen('screen-game');
+    startGameLoop();
+  };
+
+  // Petit délai pour s'assurer que le channel est abonné
+  setTimeout(doLaunch, 300);
 }
 
 function quitterSalle() {
@@ -1433,24 +1450,6 @@ function toast(msg, type='info') {
   document.getElementById('toasts').appendChild(el);
   setTimeout(()=>el.remove(), 3000);
 }
-
-// ═══════════════════════════════════════════════════════════════════
-//  SOLO MODE (test / demo)
-// ═══════════════════════════════════════════════════════════════════
-// Le jeu peut se jouer en solo pour tester le gameplay
-// (entrez un code inexistant et attendez seul – hôte, lancer si 1 joueur)
-document.getElementById('btn-launch').addEventListener('click', ()=>{}, {passive:true});
-
-// Allow solo launch override
-document.getElementById('btn-launch').ondblclick = () => {
-  if(isHost && Object.keys(waitingPlayers).length===1) {
-    // Add fake bot for testing
-    const botId='bot_'+ Math.random().toString(36).slice(2,6);
-    waitingPlayers[botId]={id:botId,pseudo:'BOT',avatar:'🤖'};
-    renderWaitingRoom();
-    setTimeout(lancerPartie,500);
-  }
-};
 
 // ═══════════════════════════════════════════════════════════════════
 //  SUPABASE TABLE CREATION HINT
