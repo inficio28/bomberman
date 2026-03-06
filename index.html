@@ -1327,7 +1327,7 @@ function renderWaitingRoom() {
   if(isHost) updateSalleDB();
 }
 
-function lancerPartie() {
+async function lancerPartie() {
   console.log('[Bomberman] lancerPartie appelé, isHost=', isHost, 'joueurs=', Object.keys(waitingPlayers));
   if(!isHost) { toast("Seul l'hote peut lancer la partie", 'error'); return; }
 
@@ -1340,16 +1340,16 @@ function lancerPartie() {
 
   initGame(waitingPlayers);
   broadcastEvent('game_start', { gs });
-  if(db) db.from('bomberman_rooms').update({status:'playing'}).eq('code',roomCode).catch(()=>{});
+  if(db) { try { await db.from('bomberman_rooms').update({status:'playing'}).eq('code',roomCode); } catch(e){} }
   showScreen('screen-game');
   startGameLoop();
   console.log('[Bomberman] Partie lancée !');
 }
 
-function quitterSalle() {
+async function quitterSalle() {
   broadcastEvent('player_leave', {id:myId, pseudo:myPseudo});
   if(channel) { try{channel.unsubscribe();}catch(e){} channel=null; }
-  if(isHost && db) db.from('bomberman_rooms').delete().eq('code',roomCode).catch(()=>{});
+  if(isHost && db) { try { await db.from('bomberman_rooms').delete().eq('code',roomCode); } catch(e){} }
   retourMenu();
 }
 
@@ -1360,7 +1360,7 @@ function checkEndGame() {
   if(!gs.running) endGame(null);
 }
 
-function endGame(winnerId) {
+async function endGame(winnerId) {
   if(gameLoop) { clearInterval(gameLoop); gameLoop=null; }
   if(timerInterval) { clearInterval(timerInterval); timerInterval=null; }
   gs.running=false;
@@ -1400,7 +1400,7 @@ function endGame(winnerId) {
       </div>`).join('');
     document.getElementById('result-podium').innerHTML = podiumHTML;
     showScreen('screen-results');
-    if(db) db.from('bomberman_rooms').delete().eq('code',roomCode).catch(()=>{});
+    if(db) { try { await db.from('bomberman_rooms').delete().eq('code',roomCode); } catch(e){} }
   }, 3000);
 }
 
