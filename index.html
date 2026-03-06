@@ -169,31 +169,42 @@ body.in-game .btn-quit-game { display:block; }
   body.in-game { overflow:hidden; }
   .controls-hint { display:none; }
 
-  /* D-PAD fixé sur le bord gauche de l'écran, centré verticalement */
-  .mobile-ctrl {
-    display:block !important;
-  }
+  .mobile-ctrl { display:block !important; }
+
+  /* D-PAD — bas gauche, style néon cyan */
   .mobile-dpad {
     position:fixed;
     left:6px;
     bottom:12px;
     z-index:300;
     display:grid;
-    grid-template-columns:repeat(3,52px);
-    grid-template-rows:repeat(3,52px);
+    grid-template-columns:repeat(3,56px);
+    grid-template-rows:repeat(3,56px);
     gap:4px;
   }
   .mobile-dpad .mbtn {
-    background:rgba(10,10,20,0.75);
-    border:2px solid rgba(255,255,255,0.3);
-    border-radius:8px;
-    font-size:1.4rem;
-    box-shadow:0 2px 8px rgba(0,0,0,0.5);
+    background:linear-gradient(135deg, rgba(0,40,0,0.95), rgba(0,80,10,0.9));
+    border:2px solid var(--green);
+    border-radius:10px;
+    font-size:1.5rem;
+    box-shadow:
+      0 0 12px rgba(57,255,20,0.9),
+      0 0 28px rgba(57,255,20,0.4),
+      inset 0 1px 0 rgba(57,255,20,0.4);
+    color: var(--green);
+    text-shadow: 0 0 10px var(--green), 0 0 20px var(--green);
+    transition: transform 0.08s, box-shadow 0.08s;
   }
   .mobile-dpad .mbtn:active {
-    background:rgba(0,229,255,0.4);
-    border-color:var(--cyan);
-    transform:scale(0.93);
+    background:linear-gradient(135deg, rgba(57,255,20,0.5), rgba(0,180,0,0.6));
+    border-color:#fff;
+    box-shadow:
+      0 0 25px rgba(57,255,20,1),
+      0 0 55px rgba(57,255,20,0.6),
+      inset 0 1px 0 rgba(255,255,255,0.6);
+    transform:scale(0.88);
+    color:#fff;
+    text-shadow: 0 0 15px #fff;
   }
   .dpad-empty {
     background:none !important;
@@ -202,26 +213,44 @@ body.in-game .btn-quit-game { display:block; }
     pointer-events:none;
   }
 
-  /* BOMBE fixée sur le bord droit de l'écran */
+  /* BOMBE — bas droite, style néon rouge/orange */
   .mobile-bomb-area {
     position:fixed;
     right:10px;
-    bottom:20px;
+    bottom:16px;
     z-index:300;
   }
   .mbtn-bomb-big {
-    width:88px; height:88px;
-    background:rgba(10,10,20,0.75);
-    border:3px solid rgba(255,62,108,0.9);
+    width:92px; height:92px;
+    background:linear-gradient(135deg, rgba(60,20,0,0.95), rgba(120,50,0,0.9));
+    border:3px solid #ff8c00;
     border-radius:50%;
-    color:white; font-size:2.4rem;
+    color:#ffe600; font-size:2.6rem;
     cursor:pointer; display:flex; align-items:center; justify-content:center;
     user-select:none; -webkit-user-select:none; touch-action:manipulation;
-    box-shadow:0 0 20px rgba(255,62,108,0.5), 0 2px 8px rgba(0,0,0,0.5);
+    box-shadow:
+      0 0 16px rgba(255,140,0,0.95),
+      0 0 40px rgba(255,140,0,0.5),
+      0 0 70px rgba(255,80,0,0.2),
+      inset 0 1px 0 rgba(255,200,0,0.4);
+    text-shadow: 0 0 14px #ff8c00, 0 0 28px #ff4400;
+    animation: bombpulse 1.4s ease-in-out infinite;
+    transition: transform 0.08s;
+  }
+  @keyframes bombpulse {
+    0%,100% { box-shadow: 0 0 16px rgba(255,140,0,0.95), 0 0 40px rgba(255,140,0,0.5), 0 0 70px rgba(255,80,0,0.2), inset 0 1px 0 rgba(255,200,0,0.4); border-color:#ff8c00; }
+    50%      { box-shadow: 0 0 30px rgba(255,200,0,1),    0 0 70px rgba(255,140,0,0.8), 0 0 110px rgba(255,80,0,0.4), inset 0 1px 0 rgba(255,220,0,0.6); border-color:#ffe600; }
   }
   .mbtn-bomb-big:active {
-    background:rgba(255,62,108,0.6);
-    transform:scale(0.91);
+    background:linear-gradient(135deg, rgba(255,230,0,0.6), rgba(255,100,0,0.7));
+    border-color:#fff;
+    box-shadow:
+      0 0 40px rgba(255,255,255,1),
+      0 0 80px rgba(255,200,0,0.9),
+      0 0 120px rgba(255,80,0,0.5);
+    text-shadow: 0 0 20px #fff;
+    transform:scale(0.86);
+    animation:none;
   }
 }
 
@@ -291,13 +320,7 @@ body.in-game .btn-quit-game { display:block; }
       </select>
     </div>
     <button class="btn btn-red" id="btn-creer">CREER UNE PARTIE</button>
-    <div class="sep">ou rejoindre</div>
-    <div class="field">
-      <label>CODE DE SALLE</label>
-      <input type="text" id="inp-code" placeholder="ABCD" maxlength="4" style="text-transform:uppercase;letter-spacing:6px;font-size:0.8rem">
-    </div>
-    <button class="btn btn-cyan" id="btn-rejoindre">REJOINDRE</button>
-    <div class="sep">salles ouvertes</div>
+    <div class="sep" style="color:#555;font-size:0.32rem;letter-spacing:1px">↓ REJOINDRE UNE SALLE EN CLIQUANT DESSUS</div>
     <div class="rooms-list" id="rooms-list">
       <div style="padding:14px;text-align:center;font-size:0.35rem;color:#333">Chargement...</div>
     </div>
@@ -365,7 +388,10 @@ body.in-game .btn-quit-game { display:block; }
     <div style="font-size:clamp(0.7rem,3vw,1.4rem);color:var(--yellow);text-shadow:0 0 10px var(--yellow);margin-bottom:4px">GAME OVER</div>
     <div style="font-size:0.38rem;color:#444;margin-bottom:16px">RESULTATS</div>
     <div class="podium" id="result-podium"></div>
-    <button class="btn btn-red" id="btn-menu-res" style="max-width:260px;margin-top:12px">RETOUR AU MENU</button>
+    <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-top:12px">
+      <button class="btn btn-green" id="btn-rejouer" style="max-width:260px">🔄 REJOUER</button>
+      <button class="btn btn-red" id="btn-menu-res" style="max-width:260px">RETOUR AU MENU</button>
+    </div>
   </div>
 </div>
 
@@ -413,13 +439,13 @@ window.addEventListener("load", function() {
   try { var p=localStorage.getItem("bom_p"); if(p) document.getElementById("inp-pseudo").value=p; } catch(e){}
 
   document.getElementById("btn-creer").addEventListener("click", creerSalle);
-  document.getElementById("btn-rejoindre").addEventListener("click", rejoindreParCode);
   document.getElementById("btn-refresh").addEventListener("click", chargerSalles);
   document.getElementById("btn-launch").addEventListener("click", lancerPartie);
   document.getElementById("btn-quit-wait").addEventListener("click", quitterSalle);
   document.getElementById("btn-chat-send").addEventListener("click", envoyerChat);
   document.getElementById("btn-menu-ov").addEventListener("click", retourMenu);
   document.getElementById("btn-menu-res").addEventListener("click", retourMenu);
+  document.getElementById("btn-rejouer").addEventListener("click", rejouer);
   document.getElementById("btn-quit-game").addEventListener("click", function(){
     if(confirm("Quitter la partie en cours ?")){
       broadcastEvent("player_leave",{id:myId,pseudo:myPseudo});
@@ -429,8 +455,9 @@ window.addEventListener("load", function() {
   document.getElementById("chat-inp").addEventListener("keydown", function(e){ if(e.key==="Enter") envoyerChat(); });
 
   var km={ArrowUp:"up",ArrowDown:"down",ArrowLeft:"left",ArrowRight:"right",z:"up",s:"down",q:"left",d:"right",Z:"up",S:"down",Q:"left",D:"right"," ":"bomb"};
-  document.addEventListener("keydown",function(e){ var k=km[e.key]; if(k){keys[k]=true; if(k!=="bomb")e.preventDefault();} });
-  document.addEventListener("keyup",function(e){ var k=km[e.key]; if(k) keys[k]=false; });
+  function isTyping(){ var t=document.activeElement; return t&&(t.tagName==="INPUT"||t.tagName==="TEXTAREA"); }
+  document.addEventListener("keydown",function(e){ if(isTyping()) return; var k=km[e.key]; if(k){keys[k]=true; if(k!=="bomb")e.preventDefault();} });
+  document.addEventListener("keyup",function(e){ if(isTyping()) return; var k=km[e.key]; if(k) keys[k]=false; });
 
   function mpress(dir,down){
     return function(e){
@@ -681,7 +708,11 @@ async function chargerSalles(){
       var pls={}; try{pls=JSON.parse(r.players||"{}");}catch(e){}
       var age=r.updated_at?Math.floor((Date.now()-new Date(r.updated_at).getTime())/1000):null;
       var ageStr=age!==null?(age<60?age+"s":Math.floor(age/60)+"min"):"";
-      return '<div class="room-item" onclick="rejoindreCode(\''+r.code+'\')"><span class="rname">'+r.code+'</span><span class="rinfo">'+Object.keys(pls).length+'/4 &nbsp;<span style="color:#333;font-size:0.28rem">'+ageStr+'</span></span></div>';
+      var name=r.name||("Room "+r.code);
+      return '<div class="room-item" onclick="rejoindreCode(\''+r.code+'\',\''+name.replace(/'/g,"\\'")+'\')">'
+        +'<span class="rname">'+name+'</span>'
+        +'<span class="rinfo">'+Object.keys(pls).length+'/4 &nbsp;<span style="color:#333;font-size:0.28rem">'+ageStr+'</span></span>'
+        +'</div>';
     }).join("");
   }catch(e){}
 }
@@ -692,30 +723,25 @@ function creerSalle(){
   myAvatar=document.getElementById("inp-avatar").value;
   try{localStorage.setItem("bom_p",myPseudo);}catch(e){}
   roomCode=genCode(); isHost=true; waitingPlayers={};
+  var roomName="Room de "+myPseudo;
   waitingPlayers[myId]={id:myId,pseudo:myPseudo,avatar:myAvatar};
-  document.getElementById("code-display").textContent=roomCode;
+  document.getElementById("code-display").textContent=roomName;
   showScreen("screen-waiting"); renderWaitingRoom();
   if(db) subscribeRoom(roomCode);
-  if(db) db.from("bomberman_rooms").upsert({code:roomCode,host_id:myId,status:"waiting",players:JSON.stringify(waitingPlayers),created_at:new Date().toISOString(),updated_at:new Date().toISOString()}).then(function(){}).catch(function(){});
-  addChat("Salle "+roomCode+" creee","system");
+  if(db) db.from("bomberman_rooms").upsert({code:roomCode,host_id:myId,status:"waiting",name:roomName,players:JSON.stringify(waitingPlayers),created_at:new Date().toISOString(),updated_at:new Date().toISOString()}).then(function(){}).catch(function(){});
+  addChat(roomName+" creee","system");
 }
 
-function rejoindreParCode(){
-  var code=document.getElementById("inp-code").value.trim().toUpperCase();
-  if(code.length!==4){toast("Code de 4 lettres requis","err");return;}
-  rejoindreCode(code);
-}
-
-function rejoindreCode(code){
+function rejoindreCode(code,name){
   myPseudo=document.getElementById("inp-pseudo").value.trim()||"Bomber";
   myAvatar=document.getElementById("inp-avatar").value;
   try{localStorage.setItem("bom_p",myPseudo);}catch(e){}
   roomCode=code; isHost=false;
   waitingPlayers[myId]={id:myId,pseudo:myPseudo,avatar:myAvatar};
-  document.getElementById("code-display").textContent=roomCode;
+  document.getElementById("code-display").textContent=name||("Room "+code);
   showScreen("screen-waiting"); renderWaitingRoom();
   if(db) subscribeRoom(roomCode);
-  addChat("Rejoint salle "+roomCode,"system");
+  addChat("Rejoint "+(name||code),"system");
 }
 
 function renderWaitingRoom(){
@@ -806,7 +832,25 @@ function endGame(winnerId){
   },3000);
 }
 
-function envoyerChat(){ var inp=document.getElementById("chat-inp"),msg=inp.value.trim(); if(!msg) return; broadcastEvent("chat",{pseudo:myPseudo,msg:msg}); addChat(myPseudo+": "+msg,"player"); inp.value=""; }
+function rejouer(){
+  if(!roomCode){ retourMenu(); return; }
+  if(gameLoop){clearInterval(gameLoop);gameLoop=null;}
+  if(timerInterval){clearInterval(timerInterval);timerInterval=null;}
+  document.getElementById("game-overlay").classList.remove("show");
+  if(isHost){
+    // L'hôte relance avec les mêmes joueurs
+    if(Object.keys(waitingPlayers).length<2){ toast("Plus assez de joueurs","err"); retourMenu(); return; }
+    initGame(waitingPlayers);
+    broadcastEvent("game_start",{gs:gs});
+    if(db) db.from("bomberman_rooms").update({status:"playing",updated_at:new Date().toISOString()}).eq("code",roomCode).catch(function(){});
+    showScreen("screen-game");
+    startGameLoop();
+  } else {
+    // Les autres attendent le signal de l'hôte — on retourne en attente
+    toast("En attente de l'hôte...","");
+    showScreen("screen-game");
+  }
+}{ var inp=document.getElementById("chat-inp"),msg=inp.value.trim(); if(!msg) return; broadcastEvent("chat",{pseudo:myPseudo,msg:msg}); addChat(myPseudo+": "+msg,"player"); inp.value=""; }
 function addChat(text,type){ var el=document.getElementById("chat-msgs"); if(!el) return; var d=document.createElement("div"); d.className="cm-"+(type||"player"); d.textContent=text; el.appendChild(d); el.scrollTop=el.scrollHeight; }
 function showScreen(id){ document.querySelectorAll(".screen").forEach(function(s){s.classList.remove("active");}); document.getElementById(id).classList.add("active"); if(id==="screen-game"){ document.body.classList.add("in-game"); resizeCanvas(); } else { document.body.classList.remove("in-game"); } }
 function retourMenu(){ if(gameLoop){clearInterval(gameLoop);gameLoop=null;} if(timerInterval){clearInterval(timerInterval);timerInterval=null;} if(channel){try{channel.unsubscribe();}catch(e){} channel=null;} gs={map:[],players:{},bombs:[],explosions:[],powerups:[],running:false,timeLeft:GAME_DURATION}; keys={up:false,down:false,left:false,right:false,bomb:false}; isHost=false; roomCode=""; waitingPlayers={}; document.getElementById("game-overlay").classList.remove("show"); chargerSalles(); showScreen("screen-menu"); }
