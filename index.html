@@ -1,0 +1,1474 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>💣 BomberOnline</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.38.4/dist/umd/supabase.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet">
+<style>
+:root {
+  --pixel: 2px;
+  --cell: 44px;
+  --bg: #0a0a0f;
+  --panel: #13131f;
+  --border: #2a2a4a;
+  --accent: #ff3e6c;
+  --accent2: #00e5ff;
+  --accent3: #ffe600;
+  --green: #39ff14;
+  --glow: 0 0 12px var(--accent), 0 0 30px rgba(255,62,108,0.3);
+  --glow2: 0 0 12px var(--accent2), 0 0 30px rgba(0,229,255,0.3);
+}
+
+* { margin:0; padding:0; box-sizing:border-box; }
+
+body {
+  background: var(--bg);
+  font-family: 'Press Start 2P', monospace;
+  color: white;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  overflow-x: hidden;
+}
+
+/* Scanlines effect */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 2px,
+    rgba(0,0,0,0.08) 2px,
+    rgba(0,0,0,0.08) 4px
+  );
+  pointer-events: none;
+  z-index: 9999;
+}
+
+/* ── HEADER ── */
+.header {
+  text-align: center;
+  padding: 24px 0 16px 0;
+  position: relative;
+}
+.header h1 {
+  font-size: clamp(1.2rem, 4vw, 2rem);
+  color: var(--accent3);
+  text-shadow: 0 0 10px var(--accent3), 3px 3px 0 #b8a200, 6px 6px 0 #5a5000;
+  letter-spacing: 4px;
+  animation: flicker 4s infinite;
+}
+@keyframes flicker {
+  0%,95%,100%{opacity:1} 96%{opacity:0.7} 97%{opacity:1} 98%{opacity:0.85}
+}
+.header p {
+  font-size: 0.42rem;
+  color: var(--accent2);
+  margin-top: 8px;
+  letter-spacing: 3px;
+  opacity: 0.7;
+}
+
+/* ── SCREENS ── */
+.screen { display:none; width:100%; max-width:900px; padding:0 16px; }
+.screen.active { display:flex; flex-direction:column; align-items:center; }
+
+/* ── MENU ── */
+.menu-box {
+  background: var(--panel);
+  border: 2px solid var(--border);
+  border-radius: 4px;
+  padding: 32px;
+  width: 100%;
+  max-width: 480px;
+  position: relative;
+}
+.menu-box::before {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  border-radius: 4px;
+  background: linear-gradient(135deg, var(--accent), var(--accent2), var(--accent3), var(--accent));
+  background-size: 300%;
+  animation: borderAnim 3s linear infinite;
+  z-index: -1;
+}
+@keyframes borderAnim { 0%{background-position:0%} 100%{background-position:300%} }
+
+.input-group { margin-bottom: 16px; }
+.input-group label {
+  display: block;
+  font-size: 0.5rem;
+  color: var(--accent2);
+  margin-bottom: 8px;
+  letter-spacing: 2px;
+}
+.input-group input, .input-group select {
+  width: 100%;
+  background: #0d0d1a;
+  border: 2px solid var(--border);
+  color: white;
+  font-family: 'Press Start 2P', monospace;
+  font-size: 0.55rem;
+  padding: 12px 14px;
+  border-radius: 3px;
+  outline: none;
+  transition: border-color 0.2s;
+}
+.input-group input:focus, .input-group select:focus { border-color: var(--accent2); }
+.input-group select option { background: #0d0d1a; }
+
+.btn {
+  width: 100%;
+  padding: 14px;
+  font-family: 'Press Start 2P', monospace;
+  font-size: 0.55rem;
+  border: none;
+  border-radius: 3px;
+  cursor: pointer;
+  letter-spacing: 2px;
+  transition: all 0.15s;
+  margin-bottom: 10px;
+  position: relative;
+  overflow: hidden;
+}
+.btn::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: rgba(255,255,255,0.1);
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+.btn:hover::after { opacity: 1; }
+.btn:active { transform: scale(0.97); }
+
+.btn-primary { background: var(--accent); color: white; box-shadow: var(--glow); }
+.btn-secondary { background: #1a1a2e; color: var(--accent2); border: 2px solid var(--accent2); box-shadow: var(--glow2); }
+.btn-success { background: var(--green); color: #000; box-shadow: 0 0 12px var(--green); }
+.btn-danger { background: #ff1744; color: white; }
+.btn-grey { background: #1e1e30; color: #888; border: 2px solid #333; }
+.btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+.separator { text-align:center; font-size:0.45rem; color:#444; margin:14px 0; letter-spacing:3px; }
+
+/* ── LOBBY ── */
+.rooms-list {
+  width: 100%;
+  max-height: 200px;
+  overflow-y: auto;
+  background: #0d0d1a;
+  border: 2px solid var(--border);
+  border-radius: 3px;
+  margin-bottom: 12px;
+}
+.room-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--border);
+  cursor: pointer;
+  transition: background 0.15s;
+  font-size: 0.42rem;
+}
+.room-item:last-child { border-bottom: none; }
+.room-item:hover { background: rgba(0,229,255,0.05); }
+.room-item .room-name { color: var(--accent2); }
+.room-item .room-info { color: #555; }
+
+/* ── WAITING ROOM ── */
+.waiting-room {
+  background: var(--panel);
+  border: 2px solid var(--border);
+  border-radius: 4px;
+  padding: 24px;
+  width: 100%;
+  max-width: 560px;
+  text-align: center;
+}
+.room-code {
+  font-size: 1.8rem;
+  color: var(--accent3);
+  text-shadow: 0 0 10px var(--accent3);
+  letter-spacing: 8px;
+  margin: 16px 0;
+}
+.players-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+  margin: 20px 0;
+}
+.player-slot {
+  background: #0d0d1a;
+  border: 2px solid var(--border);
+  border-radius: 4px;
+  padding: 12px 6px;
+  text-align: center;
+  font-size: 0.38rem;
+  min-height: 80px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  transition: all 0.2s;
+}
+.player-slot.filled { border-color: var(--green); background: rgba(57,255,20,0.05); }
+.player-slot .avatar { font-size: 1.6rem; }
+.player-slot .pname { color: white; word-break: break-all; }
+.player-slot .pempty { color: #333; }
+
+/* ── GAME LAYOUT ── */
+#screen-game {
+  flex-direction: row;
+  align-items: flex-start;
+  gap: 16px;
+  padding: 0 8px 16px 8px;
+}
+.game-sidebar {
+  width: 160px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.stat-panel {
+  background: var(--panel);
+  border: 2px solid var(--border);
+  border-radius: 3px;
+  padding: 10px;
+}
+.stat-panel .stat-title {
+  font-size: 0.35rem;
+  color: var(--accent2);
+  letter-spacing: 2px;
+  margin-bottom: 8px;
+}
+.player-stat {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 0;
+  border-bottom: 1px solid var(--border);
+  font-size: 0.38rem;
+}
+.player-stat:last-child { border-bottom: none; }
+.player-stat .ps-avatar { font-size: 1rem; }
+.player-stat .ps-name { flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color: #ccc; }
+.player-stat .ps-hp { color: var(--accent); }
+.player-stat.dead .ps-name { color: #444; text-decoration: line-through; }
+.player-stat.me .ps-name { color: var(--accent3); }
+
+.powerup-panel .pu-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.38rem;
+  padding: 3px 0;
+  color: #aaa;
+}
+.powerup-panel .pu-val { color: var(--accent3); }
+
+.game-wrap {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+/* ── CANVAS ── */
+#gameCanvas {
+  border: 3px solid var(--border);
+  box-shadow: 0 0 30px rgba(255,62,108,0.2), 0 0 60px rgba(0,229,255,0.1);
+  image-rendering: pixelated;
+  display: block;
+}
+
+.game-hud {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  font-size: 0.42rem;
+}
+.hud-timer { color: var(--accent3); font-size: 0.7rem; text-shadow: 0 0 8px var(--accent3); }
+.hud-label { color: #555; }
+
+/* ── OVERLAY ── */
+.game-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(0,0,0,0.85);
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  z-index: 10;
+  text-align: center;
+}
+.game-overlay.active { display:flex; }
+.overlay-title {
+  font-size: clamp(1.2rem, 5vw, 2.5rem);
+  margin-bottom: 16px;
+}
+.overlay-sub { font-size: 0.5rem; color: #aaa; margin-bottom: 24px; }
+
+/* ── CONTROLS HINT ── */
+.controls-hint {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  padding: 8px 12px;
+  font-size: 0.35rem;
+  color: #555;
+  letter-spacing: 1px;
+  text-align: center;
+}
+.controls-hint span { color: var(--accent2); }
+
+/* ── CHAT ── */
+.chat-box {
+  background: var(--panel);
+  border: 2px solid var(--border);
+  border-radius: 3px;
+  padding: 8px;
+  width: 100%;
+  max-width: 560px;
+}
+.chat-messages {
+  height: 80px;
+  overflow-y: auto;
+  margin-bottom: 6px;
+  font-size: 0.35rem;
+  color: #666;
+  line-height: 1.8;
+}
+.chat-messages .msg-player { color: var(--accent2); }
+.chat-messages .msg-system { color: #555; font-style: italic; }
+.chat-row { display:flex; gap:6px; }
+.chat-row input {
+  flex: 1;
+  background: #0d0d1a;
+  border: 1px solid var(--border);
+  color: white;
+  font-family: 'Press Start 2P', monospace;
+  font-size: 0.38rem;
+  padding: 6px 8px;
+  border-radius: 2px;
+  outline: none;
+}
+.chat-row button {
+  background: var(--accent2);
+  color: #000;
+  font-family: 'Press Start 2P', monospace;
+  font-size: 0.35rem;
+  padding: 6px 10px;
+  border: none;
+  border-radius: 2px;
+  cursor: pointer;
+}
+
+/* ── MOBILE CONTROLS ── */
+.mobile-controls {
+  display: none;
+  grid-template-columns: repeat(3, 56px);
+  grid-template-rows: repeat(3, 56px);
+  gap: 4px;
+  margin-top: 8px;
+}
+@media (max-width: 700px) { .mobile-controls { display:grid; } }
+.m-btn {
+  background: rgba(255,255,255,0.08);
+  border: 2px solid var(--border);
+  border-radius: 4px;
+  color: white;
+  font-size: 1.2rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: manipulation;
+}
+.m-btn:active { background: rgba(255,62,108,0.3); border-color: var(--accent); }
+.m-btn.bomb-btn { background: rgba(255,62,108,0.15); grid-column:2; grid-row:2; font-size:1.4rem; }
+
+/* ── TOAST ── */
+.toast-container { position:fixed; top:20px; right:20px; z-index:10000; display:flex; flex-direction:column; gap:8px; }
+.toast {
+  background: var(--panel);
+  border: 2px solid var(--accent2);
+  border-radius: 3px;
+  padding: 10px 16px;
+  font-size: 0.42rem;
+  color: var(--accent2);
+  animation: toastIn 0.3s ease, toastOut 0.3s ease 2.5s forwards;
+  max-width: 280px;
+}
+.toast.error { border-color: var(--accent); color: var(--accent); }
+.toast.success { border-color: var(--green); color: var(--green); }
+@keyframes toastIn { from{transform:translateX(100px);opacity:0} to{transform:translateX(0);opacity:1} }
+@keyframes toastOut { to{transform:translateX(100px);opacity:0} }
+
+/* ── SCROLLBAR ── */
+::-webkit-scrollbar { width:4px; }
+::-webkit-scrollbar-track { background:#0d0d1a; }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius:2px; }
+
+/* ── RESULT SCREEN ── */
+.podium { display:flex; gap:16px; margin:20px 0; align-items:flex-end; justify-content:center; flex-wrap:wrap; }
+.podium-card {
+  background: var(--panel);
+  border: 2px solid var(--border);
+  border-radius: 4px;
+  padding: 16px 20px;
+  text-align:center;
+  min-width:100px;
+}
+.podium-card.first { border-color: var(--accent3); }
+.podium-card.second { border-color: #aaa; }
+.podium-card.third { border-color: #c0622f; }
+.podium-card .pod-rank { font-size:1.8rem; }
+.podium-card .pod-name { font-size:0.42rem; margin:6px 0; color:#ccc; }
+.podium-card .pod-kills { font-size:0.38rem; color:var(--accent2); }
+
+@media (max-width:600px) {
+  #screen-game { flex-direction:column; }
+  .game-sidebar { width:100%; flex-direction:row; flex-wrap:wrap; }
+  .stat-panel { flex:1; min-width:140px; }
+  #gameCanvas { max-width: 100%; height:auto; }
+}
+</style>
+</head>
+<body>
+
+<div class="toast-container" id="toasts"></div>
+
+<div class="header">
+  <h1>💣 BOMBER ONLINE</h1>
+  <p>MULTIPLAYER · 2D · PIXEL BATTLE</p>
+</div>
+
+<!-- ══════════════════════════════════ SCREEN: MENU ══════════════════════════════════ -->
+<div class="screen active" id="screen-menu">
+  <div class="menu-box">
+    <div class="input-group">
+      <label>👾 TON PSEUDO</label>
+      <input type="text" id="inp-pseudo" placeholder="BomberKing" maxlength="14">
+    </div>
+    <div class="input-group">
+      <label>🎨 TON PERSONNAGE</label>
+      <select id="inp-avatar">
+        <option value="💣">💣 Bomber Classic</option>
+        <option value="🤖">🤖 Robo Bomber</option>
+        <option value="👾">👾 Alien Bomber</option>
+        <option value="🐱">🐱 Cat Bomber</option>
+        <option value="🦊">🦊 Fox Bomber</option>
+        <option value="🐸">🐸 Frog Bomber</option>
+        <option value="🐼">🐼 Panda Bomber</option>
+        <option value="🦄">🦄 Unicorn Bomber</option>
+      </select>
+    </div>
+    <button class="btn btn-primary" onclick="creerSalle()">⚡ CRÉER UNE PARTIE</button>
+    <div class="separator">— ou rejoindre —</div>
+    <div class="input-group">
+      <label>🔑 CODE DE SALLE</label>
+      <input type="text" id="inp-code" placeholder="EX: ABCD" maxlength="4" style="text-transform:uppercase;letter-spacing:4px;font-size:0.8rem">
+    </div>
+    <button class="btn btn-secondary" onclick="rejoindreParCode()">🚀 REJOINDRE</button>
+    <div class="separator">— salles ouvertes —</div>
+    <div class="rooms-list" id="rooms-list"><div style="padding:16px;text-align:center;font-size:0.4rem;color:#444">Chargement...</div></div>
+    <button class="btn btn-grey" onclick="chargerSalles()" style="margin-top:4px;font-size:0.38rem">🔄 ACTUALISER</button>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════ SCREEN: WAITING ══════════════════════════════════ -->
+<div class="screen" id="screen-waiting">
+  <div class="waiting-room">
+    <div style="font-size:0.4rem;color:#555;letter-spacing:2px">CODE DE LA SALLE</div>
+    <div class="room-code" id="display-code">----</div>
+    <div style="font-size:0.38rem;color:#666;margin-bottom:8px">Partage ce code avec tes amis !</div>
+    <div class="players-grid" id="players-grid"></div>
+    <div id="waiting-status" style="font-size:0.42rem;color:#555;margin:8px 0">En attente de joueurs... (min. 2)</div>
+    <button class="btn btn-success" id="btn-launch" onclick="lancerPartie()" disabled style="margin-top:10px">▶ LANCER LA PARTIE</button>
+    <button class="btn btn-danger" onclick="quitterSalle()" style="margin-top:6px">✖ QUITTER</button>
+  </div>
+  <div class="chat-box" style="max-width:560px;margin-top:12px">
+    <div class="chat-messages" id="chat-msgs"></div>
+    <div class="chat-row">
+      <input type="text" id="chat-inp" placeholder="Écris un message..." maxlength="60" onkeydown="if(event.key==='Enter')envoyerChat()">
+      <button onclick="envoyerChat()">ENVOYER</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════ SCREEN: GAME ══════════════════════════════════ -->
+<div class="screen" id="screen-game">
+  <div class="game-sidebar">
+    <div class="stat-panel">
+      <div class="stat-title">⚔ JOUEURS</div>
+      <div id="players-stats"></div>
+    </div>
+    <div class="stat-panel powerup-panel">
+      <div class="stat-title">⚡ MON STUFF</div>
+      <div class="pu-row"><span>💣 Bombes</span><span class="pu-val" id="pu-bombs">1</span></div>
+      <div class="pu-row"><span>🔥 Flammes</span><span class="pu-val" id="pu-flame">2</span></div>
+      <div class="pu-row"><span>💨 Vitesse</span><span class="pu-val" id="pu-speed">1</span></div>
+    </div>
+  </div>
+
+  <div class="game-wrap">
+    <div class="game-hud">
+      <span class="hud-label">TEMPS</span>
+      <span class="hud-timer" id="hud-timer">03:00</span>
+      <span class="hud-label" id="hud-alive">•</span>
+    </div>
+
+    <div style="position:relative;display:inline-block">
+      <canvas id="gameCanvas"></canvas>
+      <div class="game-overlay" id="game-overlay">
+        <div class="overlay-title" id="overlay-title">🏆 VICTOIRE !</div>
+        <div class="overlay-sub" id="overlay-sub">Retour au menu...</div>
+        <button class="btn btn-primary" onclick="retourMenu()" style="width:200px;margin-top:10px">🏠 MENU</button>
+      </div>
+    </div>
+
+    <div class="controls-hint">
+      <span>↑↓←→</span> DÉPLACER &nbsp;|&nbsp; <span>ESPACE</span> POSER BOMBE &nbsp;|&nbsp; <span>MOBILE</span> ↓
+    </div>
+
+    <!-- Contrôles mobiles -->
+    <div class="mobile-controls" id="mobile-ctrl">
+      <div></div>
+      <div class="m-btn" id="mb-up" ontouchstart="mobileDir('up',true)" ontouchend="mobileDir('up',false)">▲</div>
+      <div></div>
+      <div class="m-btn" id="mb-left" ontouchstart="mobileDir('left',true)" ontouchend="mobileDir('left',false)">◀</div>
+      <div class="m-btn bomb-btn" ontouchstart="mobileBomb()">💣</div>
+      <div class="m-btn" id="mb-right" ontouchstart="mobileDir('right',true)" ontouchend="mobileDir('right',false)">▶</div>
+      <div></div>
+      <div class="m-btn" id="mb-down" ontouchstart="mobileDir('down',true)" ontouchend="mobileDir('down',false)">▼</div>
+      <div></div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════ SCREEN: RESULTS ══════════════════════════════════ -->
+<div class="screen" id="screen-results">
+  <div style="text-align:center;padding:20px 0">
+    <div style="font-size:clamp(0.8rem,3vw,1.6rem);color:var(--accent3);text-shadow:0 0 10px var(--accent3);margin-bottom:6px">🏆 GAME OVER</div>
+    <div style="font-size:0.42rem;color:#555;margin-bottom:20px">RÉSULTATS DE LA PARTIE</div>
+    <div class="podium" id="result-podium"></div>
+    <button class="btn btn-primary" onclick="retourMenu()" style="max-width:300px;margin-top:16px">🏠 RETOUR AU MENU</button>
+  </div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════════════════════
+//  CONFIGURATION SUPABASE
+//  !! Remplace par tes propres clés si tu as un projet Supabase !!
+//  (ou le jeu fonctionnera en mode LOCAL uniquement)
+// ═══════════════════════════════════════════════════════════════════
+const SUPA_URL = "https://unzbcnrlpeevrxmrtims.supabase.co";
+const SUPA_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVuemJjbnJscGVldnJ4bXJ0aW1zIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI4MDE0OTgsImV4cCI6MjA4ODM3NzQ5OH0.6VNz_v-TD3RLaWe4QLZun4jReYrKHMdWjZ7dprZaLgA";
+
+// ═══════════════════════════════════════════════════════════════════
+//  CONSTANTES DU JEU
+// ═══════════════════════════════════════════════════════════════════
+const COLS = 15, ROWS = 13;
+const CELL = 44;
+const W = COLS * CELL, H = ROWS * CELL;
+const TICK = 50; // ms per frame
+const GAME_DURATION = 180; // seconds
+
+// Tile types
+const T_EMPTY = 0, T_WALL = 1, T_BLOCK = 2, T_POWERUP = 3;
+// Powerup types
+const PU_BOMB = 'bomb', PU_FLAME = 'flame', PU_SPEED = 'speed';
+
+// Player colors (canvas-rendered)
+const PLAYER_COLORS = ['#ff3e6c','#00e5ff','#ffe600','#39ff14','#ff6b35','#da77f2','#ff8fab','#94d2bd'];
+const PLAYER_BG     = ['#3d0012','#001a1f','#1a1600','#001a00','#1a0c00','#1a0025','#1a0012','#001a16'];
+
+// Spawns (x,y in tiles)
+const SPAWNS = [[1,1],[COLS-2,1],[1,ROWS-2],[COLS-2,ROWS-2],[1,ROWS/2|0],[COLS-2,ROWS/2|0],[(COLS/2|0),1],(COLS/2|0,ROWS-2)];
+
+// ═══════════════════════════════════════════════════════════════════
+//  ÉTAT GLOBAL
+// ═══════════════════════════════════════════════════════════════════
+let db = null;
+let myId = Math.random().toString(36).slice(2,10);
+let myPseudo = '', myAvatar = '💣';
+let roomCode = '';
+let isHost = false;
+let channel = null;
+let gameLoop = null;
+let timerInterval = null;
+
+// Game state (authoritative on host, replicated on clients)
+let gs = {
+  map: [],        // 2D grid
+  players: {},    // id -> {x,y,hp,bombs,flame,speed,kills,dead,pseudo,avatar,color,spawnIdx}
+  bombs: [],      // [{id,x,y,timer,flame,ownerId}]
+  explosions: [], // [{x,y,timer,dir}]
+  powerups: [],   // [{x,y,type}]
+  running: false,
+  timeLeft: GAME_DURATION,
+};
+
+// Local input
+let keys = {up:false,down:false,left:false,right:false,bomb:false};
+let lastMove = 0, lastBomb = 0;
+let moveBuffer = null; // pending move from server
+let localBombReq = false;
+
+// Players list from waiting room
+let waitingPlayers = {};
+
+// ═══════════════════════════════════════════════════════════════════
+//  INIT
+// ═══════════════════════════════════════════════════════════════════
+window.addEventListener('load', () => {
+  try {
+    db = supabase.createClient(SUPA_URL, SUPA_KEY);
+    chargerSalles();
+    setInterval(chargerSalles, 8000);
+  } catch(e) {
+    toast('Mode hors-ligne activé (Supabase non configuré)', 'error');
+  }
+  setupCanvas();
+  setupKeyboard();
+  loadPseudo();
+});
+
+function loadPseudo() {
+  try {
+    const p = localStorage.getItem('bom_pseudo');
+    if(p) document.getElementById('inp-pseudo').value = p;
+  } catch(e){}
+}
+
+// ═══════════════════════════════════════════════════════════════════
+//  CANVAS
+// ═══════════════════════════════════════════════════════════════════
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d');
+function setupCanvas() {
+  canvas.width = W;
+  canvas.height = H;
+  // Scale for small screens
+  const maxW = Math.min(window.innerWidth - 200, 660);
+  if(W > maxW) {
+    const s = maxW / W;
+    canvas.style.width = (W*s)+'px';
+    canvas.style.height = (H*s)+'px';
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════
+//  MAP GENERATION
+// ═══════════════════════════════════════════════════════════════════
+function generateMap(seed) {
+  // Seeded random for consistency across clients
+  let s = seed || 12345;
+  const rng = () => { s = (s * 1664525 + 1013904223) & 0xffffffff; return (s >>> 0) / 0xffffffff; };
+
+  const map = [];
+  for(let r=0;r<ROWS;r++) {
+    map.push([]);
+    for(let c=0;c<COLS;c++) {
+      if(r===0||r===ROWS-1||c===0||c===COLS-1) { map[r].push(T_WALL); continue; }
+      if(r%2===0 && c%2===0) { map[r].push(T_WALL); continue; }
+      // Keep spawns clear
+      const isSpawnArea = SPAWNS.some(([sx,sy]) => Math.abs(c-sx)<=1 && Math.abs(r-sy)<=1);
+      if(isSpawnArea) { map[r].push(T_EMPTY); continue; }
+      map[r].push(rng() < 0.65 ? T_BLOCK : T_EMPTY);
+    }
+  }
+  return map;
+}
+
+// ═══════════════════════════════════════════════════════════════════
+//  DRAWING
+// ═══════════════════════════════════════════════════════════════════
+const COLORS = {
+  bg: '#1a1a2e',
+  wall: '#0d0d1a',
+  wallBorder: '#2a2a4a',
+  wallTop: '#1e1e3a',
+  block: '#3d2b1f',
+  blockTop: '#5c4030',
+  blockBorder: '#2a1a10',
+  empty: '#16213e',
+  emptyAlt: '#1a2540',
+};
+
+function drawMap() {
+  for(let r=0;r<ROWS;r++) {
+    for(let c=0;c<COLS;c++) {
+      const x=c*CELL, y=r*CELL, t=gs.map[r]?.[c]??T_WALL;
+      const isAlt = (r+c)%2===0;
+      if(t===T_WALL) {
+        ctx.fillStyle = COLORS.wall;
+        ctx.fillRect(x,y,CELL,CELL);
+        ctx.fillStyle = COLORS.wallTop;
+        ctx.fillRect(x+2,y+2,CELL-4,CELL/2-2);
+        ctx.strokeStyle = COLORS.wallBorder;
+        ctx.lineWidth = 1;
+        ctx.strokeRect(x+0.5,y+0.5,CELL-1,CELL-1);
+      } else if(t===T_BLOCK) {
+        ctx.fillStyle = COLORS.block;
+        ctx.fillRect(x,y,CELL,CELL);
+        ctx.fillStyle = COLORS.blockTop;
+        ctx.fillRect(x+3,y+3,CELL-6,10);
+        ctx.strokeStyle = COLORS.blockBorder;
+        ctx.lineWidth=1;
+        ctx.strokeRect(x+0.5,y+0.5,CELL-1,CELL-1);
+        // Brick pattern
+        ctx.strokeStyle='rgba(0,0,0,0.3)';
+        ctx.beginPath(); ctx.moveTo(x,y+CELL/2); ctx.lineTo(x+CELL,y+CELL/2); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(x+CELL/2,y); ctx.lineTo(x+CELL/2,y+CELL/2); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(x+CELL/4,y+CELL/2); ctx.lineTo(x+CELL/4,y+CELL); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(x+3*CELL/4,y+CELL/2); ctx.lineTo(x+3*CELL/4,y+CELL); ctx.stroke();
+      } else {
+        ctx.fillStyle = isAlt ? COLORS.empty : COLORS.emptyAlt;
+        ctx.fillRect(x,y,CELL,CELL);
+      }
+    }
+  }
+}
+
+function drawPowerups() {
+  gs.powerups.forEach(pu => {
+    const x=pu.x*CELL, y=pu.y*CELL;
+    ctx.fillStyle='rgba(255,230,0,0.15)';
+    ctx.fillRect(x+4,y+4,CELL-8,CELL-8);
+    ctx.font=`${CELL-14}px serif`;
+    ctx.textAlign='center';
+    ctx.textBaseline='middle';
+    const icon = pu.type===PU_BOMB?'💣':pu.type===PU_FLAME?'🔥':'💨';
+    ctx.fillText(icon, x+CELL/2, y+CELL/2);
+  });
+}
+
+function drawBombs() {
+  const now = Date.now();
+  gs.bombs.forEach(b => {
+    const x=b.x*CELL, y=b.y*CELL;
+    const age = (b.placedAt ? now - b.placedAt : 0) / b.timer;
+    const pulse = 0.85 + Math.sin(age * Math.PI * 6) * 0.15;
+    const r = (CELL/2-4)*pulse;
+    // Body
+    ctx.save();
+    ctx.translate(x+CELL/2, y+CELL/2);
+    ctx.scale(pulse,pulse);
+    ctx.fillStyle = '#222';
+    ctx.beginPath(); ctx.arc(0,0,CELL/2-6,0,Math.PI*2); ctx.fill();
+    ctx.strokeStyle = '#ff3e6c';
+    ctx.lineWidth=2;
+    ctx.stroke();
+    // Fuse
+    ctx.strokeStyle='#ff8c00';
+    ctx.lineWidth=2;
+    ctx.beginPath(); ctx.moveTo(2,-CELL/2+10); ctx.bezierCurveTo(8,-CELL/2+4,10,-CELL/2-4,6,-CELL/2-8); ctx.stroke();
+    // Spark
+    ctx.fillStyle='#ffe600';
+    ctx.beginPath(); ctx.arc(6,-CELL/2-8,3,0,Math.PI*2); ctx.fill();
+    ctx.restore();
+  });
+}
+
+function drawExplosions() {
+  const now = Date.now();
+  gs.explosions.forEach(ex => {
+    const age = ex.startTime ? (now-ex.startTime)/700 : 0;
+    if(age>1) return;
+    const alpha = 1-age;
+    const x=ex.x*CELL, y=ex.y*CELL;
+    // Center or branch
+    const isCenter = ex.type==='center';
+    const gradient = ctx.createRadialGradient(x+CELL/2,y+CELL/2,2,x+CELL/2,y+CELL/2,CELL/2);
+    gradient.addColorStop(0, `rgba(255,230,0,${alpha})`);
+    gradient.addColorStop(0.4, `rgba(255,100,0,${alpha*0.9})`);
+    gradient.addColorStop(1, `rgba(255,30,0,0)`);
+    ctx.fillStyle = gradient;
+    if(isCenter) {
+      ctx.beginPath();
+      ctx.arc(x+CELL/2,y+CELL/2,CELL/2*0.9,0,Math.PI*2);
+      ctx.fill();
+    } else {
+      ctx.fillRect(x+4,y+4,CELL-8,CELL-8);
+    }
+  });
+}
+
+function drawPlayers() {
+  Object.values(gs.players).forEach(p => {
+    if(p.dead) return;
+    const px = p.x * CELL, py = p.y * CELL;
+    const idx = p.spawnIdx ?? 0;
+    const col = PLAYER_COLORS[idx % PLAYER_COLORS.length];
+    const bg  = PLAYER_BG[idx % PLAYER_BG.length];
+    // Shadow
+    ctx.fillStyle='rgba(0,0,0,0.4)';
+    ctx.beginPath(); ctx.ellipse(px+CELL/2, py+CELL-4, CELL/2-6, 5, 0, 0, Math.PI*2); ctx.fill();
+    // Body
+    ctx.fillStyle = bg;
+    ctx.strokeStyle = col;
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.roundRect(px+4, py+8, CELL-8, CELL-14, 8);
+    ctx.fill(); ctx.stroke();
+    // Avatar emoji
+    ctx.font = `${CELL-18}px serif`;
+    ctx.textAlign='center';
+    ctx.textBaseline='middle';
+    ctx.fillText(p.avatar??'💣', px+CELL/2, py+CELL/2-2);
+    // Name tag
+    if(p.id === myId) {
+      ctx.fillStyle = col;
+      ctx.fillRect(px+2, py-14, CELL-4, 12);
+      ctx.fillStyle='black';
+      ctx.font='bold 7px monospace';
+      ctx.textAlign='center';
+      ctx.textBaseline='middle';
+      ctx.fillText((p.pseudo||'').slice(0,8), px+CELL/2, py-8);
+    }
+    // HP dots
+    for(let i=0;i<3;i++) {
+      ctx.fillStyle = i<p.hp ? col : '#333';
+      ctx.beginPath(); ctx.arc(px+8+i*12, py+CELL-6, 4, 0, Math.PI*2); ctx.fill();
+    }
+  });
+}
+
+function render() {
+  ctx.clearRect(0,0,W,H);
+  if(!gs.map.length) return;
+  drawMap();
+  drawPowerups();
+  drawBombs();
+  drawExplosions();
+  drawPlayers();
+}
+
+// ═══════════════════════════════════════════════════════════════════
+//  GAME LOGIC (Host authoritative)
+// ═══════════════════════════════════════════════════════════════════
+function initGame(players) {
+  const seed = Date.now() % 99999;
+  gs.map = generateMap(seed);
+  gs.bombs = [];
+  gs.explosions = [];
+  gs.powerups = [];
+  gs.running = true;
+  gs.timeLeft = GAME_DURATION;
+
+  const ids = Object.keys(players);
+  gs.players = {};
+  ids.forEach((id, i) => {
+    const [sx,sy] = SPAWNS[i % SPAWNS.length];
+    gs.players[id] = {
+      id, pseudo: players[id].pseudo, avatar: players[id].avatar,
+      x: sx, y: sy, hp: 3,
+      bombs: 1, flame: 2, speed: 1,
+      kills: 0, dead: false, spawnIdx: i,
+      moveTimer: 0,
+    };
+  });
+}
+
+const MOVE_DELAYS = [220, 180, 140, 110]; // speed 1-4
+
+function tryMove(pid, dir) {
+  const p = gs.players[pid];
+  if(!p || p.dead) return false;
+  const now = Date.now();
+  const delay = MOVE_DELAYS[Math.min(p.speed-1, MOVE_DELAYS.length-1)];
+  if(now - (p.moveTimer||0) < delay) return false;
+
+  let nx=p.x, ny=p.y;
+  if(dir==='up') ny--;
+  else if(dir==='down') ny++;
+  else if(dir==='left') nx--;
+  else if(dir==='right') nx++;
+
+  if(nx<0||ny<0||nx>=COLS||ny>=ROWS) return false;
+  const t = gs.map[ny][nx];
+  if(t===T_WALL||t===T_BLOCK) return false;
+  if(gs.bombs.some(b=>b.x===nx&&b.y===ny)) return false;
+
+  p.x=nx; p.y=ny; p.moveTimer=now;
+
+  // Collect powerup
+  const puIdx = gs.powerups.findIndex(pu=>pu.x===nx&&pu.y===ny);
+  if(puIdx!==-1) {
+    const pu = gs.powerups.splice(puIdx,1)[0];
+    if(pu.type===PU_BOMB) p.bombs=Math.min(p.bombs+1,8);
+    else if(pu.type===PU_FLAME) p.flame=Math.min(p.flame+1,8);
+    else if(pu.type===PU_SPEED) p.speed=Math.min(p.speed+1,4);
+  }
+  return true;
+}
+
+function tryPlaceBomb(pid) {
+  const p = gs.players[pid];
+  if(!p||p.dead) return false;
+  const activeBombs = gs.bombs.filter(b=>b.ownerId===pid).length;
+  if(activeBombs >= p.bombs) return false;
+  // No bomb already here
+  if(gs.bombs.some(b=>b.x===p.x&&b.y===p.y)) return false;
+
+  const bomb = {
+    id: Math.random().toString(36).slice(2,8),
+    x:p.x, y:p.y, flame:p.flame,
+    ownerId:pid, timer:3000, placedAt:Date.now()
+  };
+  gs.bombs.push(bomb);
+  setTimeout(() => explodeBomb(bomb.id), bomb.timer);
+  return true;
+}
+
+function explodeBomb(bombId) {
+  const bIdx = gs.bombs.findIndex(b=>b.id===bombId);
+  if(bIdx===-1) return;
+  const bomb = gs.bombs.splice(bIdx,1)[0];
+  const now = Date.now();
+
+  const cells = [{x:bomb.x, y:bomb.y, type:'center'}];
+  const dirs = [[0,-1],[0,1],[-1,0],[1,0]];
+  dirs.forEach(([dx,dy]) => {
+    for(let i=1;i<=bomb.flame;i++) {
+      const nx=bomb.x+dx*i, ny=bomb.y+dy*i;
+      if(nx<0||ny<0||nx>=COLS||ny>=ROWS) break;
+      const t=gs.map[ny][nx];
+      if(t===T_WALL) break;
+      cells.push({x:nx,y:ny,type:'branch'});
+      if(t===T_BLOCK) {
+        gs.map[ny][nx]=T_EMPTY;
+        // Drop powerup 35%
+        if(Math.random()<0.35) {
+          const types=[PU_BOMB,PU_FLAME,PU_SPEED];
+          gs.powerups.push({x:nx,y:ny,type:types[Math.floor(Math.random()*3)]});
+        }
+        break;
+      }
+      // Chain explosion
+      const chainIdx = gs.bombs.findIndex(b=>b.x===nx&&b.y===ny);
+      if(chainIdx!==-1) {
+        const chainId = gs.bombs[chainIdx].id;
+        setTimeout(()=>explodeBomb(chainId),100);
+      }
+    }
+  });
+
+  // Add explosion visuals
+  cells.forEach(c => gs.explosions.push({...c, startTime:now}));
+  setTimeout(()=>{ gs.explosions=gs.explosions.filter(e=>e.startTime!==now); }, 800);
+
+  // Damage players
+  cells.forEach(c => {
+    Object.values(gs.players).forEach(p => {
+      if(p.dead) return;
+      if(p.x===c.x && p.y===c.y) {
+        p.hp--;
+        if(p.hp<=0) {
+          p.dead=true;
+          // Give kill to bomber
+          const bomber = gs.players[bomb.ownerId];
+          if(bomber && bomber.id!==p.id) bomber.kills++;
+          checkVictory();
+        }
+      }
+    });
+  });
+
+  if(isHost) broadcastState();
+}
+
+function checkVictory() {
+  const alive = Object.values(gs.players).filter(p=>!p.dead);
+  if(alive.length<=1) {
+    gs.running = false;
+    if(isHost) {
+      setTimeout(()=>{
+        broadcastState();
+        broadcastEvent('game_over', { winner: alive[0]?.id || null });
+      }, 500);
+    }
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════
+//  GAME LOOP
+// ═══════════════════════════════════════════════════════════════════
+function startGameLoop() {
+  if(gameLoop) clearInterval(gameLoop);
+  gameLoop = setInterval(() => {
+    if(!gs.running) return;
+    render();
+    updateHUD();
+
+    if(isHost) {
+      // Process local input for host player
+      processInput();
+      // Broadcast state every 3 ticks
+      if(Date.now() % (TICK*3) < TICK) broadcastState();
+    } else {
+      // Process local input, send to host
+      processLocalInput();
+      render();
+    }
+  }, TICK);
+
+  // Timer (host only)
+  if(isHost) {
+    timerInterval = setInterval(() => {
+      if(!gs.running) return;
+      gs.timeLeft--;
+      if(gs.timeLeft<=0) {
+        gs.running=false;
+        broadcastEvent('game_over', { winner: null });
+      }
+    }, 1000);
+  }
+}
+
+function processInput() {
+  const p = gs.players[myId];
+  if(!p||p.dead||!gs.running) return;
+  const now = Date.now();
+  let moved = false;
+  if(keys.up) moved=tryMove(myId,'up');
+  else if(keys.down) moved=tryMove(myId,'down');
+  else if(keys.left) moved=tryMove(myId,'left');
+  else if(keys.right) moved=tryMove(myId,'right');
+  if(keys.bomb && now-lastBomb>400) {
+    tryPlaceBomb(myId); lastBomb=now;
+  }
+}
+
+function processLocalInput() {
+  // Send input events to channel
+  const now = Date.now();
+  let dir = null;
+  if(keys.up) dir='up';
+  else if(keys.down) dir='down';
+  else if(keys.left) dir='left';
+  else if(keys.right) dir='right';
+
+  if(dir && now-lastMove>80) {
+    lastMove=now;
+    broadcastEvent('player_input', { dir, pid: myId });
+  }
+  if(keys.bomb && now-lastBomb>400) {
+    lastBomb=now;
+    broadcastEvent('player_input', { bomb:true, pid:myId });
+  }
+}
+
+function updateHUD() {
+  const m=gs.timeLeft, s=m%60;
+  const mins=Math.floor(m/60);
+  document.getElementById('hud-timer').textContent =
+    `${String(mins).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+
+  const alive=Object.values(gs.players).filter(p=>!p.dead).length;
+  document.getElementById('hud-alive').textContent = `${alive} joueur${alive>1?'s':''} en vie`;
+
+  // Sidebar players
+  const me = gs.players[myId];
+  if(me) {
+    document.getElementById('pu-bombs').textContent = me.bombs;
+    document.getElementById('pu-flame').textContent = me.flame;
+    document.getElementById('pu-speed').textContent = me.speed;
+  }
+
+  // Player stats
+  const html = Object.values(gs.players).map(p => `
+    <div class="player-stat ${p.dead?'dead':''} ${p.id===myId?'me':''}">
+      <span class="ps-avatar">${p.avatar}</span>
+      <span class="ps-name">${p.pseudo}</span>
+      <span class="ps-hp">${p.dead?'💀':'❤️'.repeat(p.hp)}</span>
+    </div>`).join('');
+  document.getElementById('players-stats').innerHTML = html;
+}
+
+// ═══════════════════════════════════════════════════════════════════
+//  KEYBOARD
+// ═══════════════════════════════════════════════════════════════════
+function setupKeyboard() {
+  const map = {
+    'ArrowUp':'up','ArrowDown':'down','ArrowLeft':'left','ArrowRight':'right',
+    'z':'up','s':'down','q':'left','d':'right','Z':'up','S':'down','Q':'left','D':'right',
+    ' ':'bomb'
+  };
+  document.addEventListener('keydown', e => {
+    const k=map[e.key];
+    if(k) { keys[k]=true; if(k!=='bomb') e.preventDefault(); }
+  });
+  document.addEventListener('keyup', e => {
+    const k=map[e.key];
+    if(k) keys[k]=false;
+  });
+}
+
+// Mobile controls
+function mobileDir(dir,down) { keys[dir]=down; }
+function mobileBomb() {
+  keys.bomb=true;
+  setTimeout(()=>keys.bomb=false,150);
+}
+
+// ═══════════════════════════════════════════════════════════════════
+//  REALTIME (Supabase Broadcast)
+// ═══════════════════════════════════════════════════════════════════
+function subscribeRoom(code) {
+  if(channel) { try{channel.unsubscribe();}catch(e){} }
+  channel = db.channel(`bomberman_${code}`, {
+    config:{broadcast:{self:false}}
+  });
+
+  channel
+    .on('broadcast',{event:'player_join'}, ({payload}) => {
+      waitingPlayers[payload.id] = payload;
+      renderWaitingRoom();
+      addChat(`${payload.pseudo} a rejoint la salle`, 'system');
+    })
+    .on('broadcast',{event:'player_leave'}, ({payload}) => {
+      delete waitingPlayers[payload.id];
+      renderWaitingRoom();
+      addChat(`${payload.pseudo} a quitté`, 'system');
+    })
+    .on('broadcast',{event:'chat'}, ({payload}) => {
+      addChat(`${payload.pseudo}: ${payload.msg}`, 'player');
+    })
+    .on('broadcast',{event:'game_start'}, ({payload}) => {
+      // Receive initial game state
+      gs = payload.gs;
+      // Re-schedule bomb timers locally
+      gs.bombs.forEach(b => {
+        const remaining = b.timer - (Date.now() - b.placedAt);
+        if(remaining>0) setTimeout(()=>explodeBomb(b.id), remaining);
+      });
+      showScreen('screen-game');
+      startGameLoop();
+      addChat('La partie a commencé !', 'system');
+    })
+    .on('broadcast',{event:'game_state'}, ({payload}) => {
+      if(!isHost) {
+        // Merge state from host
+        gs.players = payload.players;
+        gs.bombs = payload.bombs;
+        gs.explosions = payload.explosions;
+        gs.powerups = payload.powerups;
+        gs.running = payload.running;
+        gs.timeLeft = payload.timeLeft;
+        if(!gs.running) checkEndGame();
+        render();
+        updateHUD();
+      }
+    })
+    .on('broadcast',{event:'player_input'}, ({payload}) => {
+      if(isHost) {
+        if(payload.dir) tryMove(payload.pid, payload.dir);
+        if(payload.bomb) tryPlaceBomb(payload.pid);
+      }
+    })
+    .on('broadcast',{event:'game_over'}, ({payload}) => {
+      gs.running=false;
+      endGame(payload.winner);
+    })
+    .subscribe();
+}
+
+function broadcastEvent(event, payload) {
+  if(!channel) return;
+  channel.send({type:'broadcast',event,payload}).catch(()=>{});
+}
+
+function broadcastState() {
+  broadcastEvent('game_state', {
+    players: gs.players,
+    bombs: gs.bombs,
+    explosions: gs.explosions,
+    powerups: gs.powerups,
+    running: gs.running,
+    timeLeft: gs.timeLeft,
+  });
+}
+
+// ═══════════════════════════════════════════════════════════════════
+//  SUPABASE DB
+// ═══════════════════════════════════════════════════════════════════
+async function creerSalleDB(code) {
+  if(!db) return;
+  await db.from('bomberman_rooms').upsert({
+    code, host_id:myId, status:'waiting',
+    players: JSON.stringify(waitingPlayers),
+    created_at: new Date().toISOString()
+  });
+}
+
+async function updateSalleDB() {
+  if(!db) return;
+  await db.from('bomberman_rooms').update({
+    players: JSON.stringify(waitingPlayers)
+  }).eq('code', roomCode);
+}
+
+async function chargerSalles() {
+  if(!db) { document.getElementById('rooms-list').innerHTML = '<div style="padding:16px;text-align:center;font-size:0.38rem;color:#555">Hors-ligne</div>'; return; }
+  try {
+    const { data } = await db.from('bomberman_rooms')
+      .select('*').eq('status','waiting')
+      .order('created_at',{ascending:false}).limit(10);
+    const el = document.getElementById('rooms-list');
+    if(!data?.length) { el.innerHTML='<div style="padding:16px;text-align:center;font-size:0.38rem;color:#444">Aucune salle ouverte</div>'; return; }
+    el.innerHTML = data.map(r => {
+      const pls = JSON.parse(r.players||'{}');
+      const count = Object.keys(pls).length;
+      return `<div class="room-item" onclick="rejoindreCode('${r.code}')">
+        <span class="room-name">💣 ${r.code}</span>
+        <span class="room-info">${count}/8 joueurs</span>
+      </div>`;
+    }).join('');
+  } catch(e) {}
+}
+
+// ═══════════════════════════════════════════════════════════════════
+//  SALLE D'ATTENTE UI
+// ═══════════════════════════════════════════════════════════════════
+function creerSalle() {
+  myPseudo = document.getElementById('inp-pseudo').value.trim() || 'Bomber';
+  myAvatar = document.getElementById('inp-avatar').value;
+  try { localStorage.setItem('bom_pseudo', myPseudo); } catch(e){}
+  roomCode = generateCode();
+  isHost = true;
+  waitingPlayers = {};
+  waitingPlayers[myId] = {id:myId, pseudo:myPseudo, avatar:myAvatar};
+  document.getElementById('display-code').textContent = roomCode;
+  subscribeRoom(roomCode);
+  creerSalleDB(roomCode);
+  renderWaitingRoom();
+  showScreen('screen-waiting');
+  broadcastEvent('player_join', {id:myId, pseudo:myPseudo, avatar:myAvatar});
+  addChat(`Tu as créé la salle ${roomCode}`, 'system');
+}
+
+function rejoindreParCode() {
+  const code = document.getElementById('inp-code').value.trim().toUpperCase();
+  if(code.length!==4) { toast('Code à 4 lettres requis', 'error'); return; }
+  rejoindreCode(code);
+}
+
+function rejoindreCode(code) {
+  myPseudo = document.getElementById('inp-pseudo').value.trim() || 'Bomber';
+  myAvatar = document.getElementById('inp-avatar').value;
+  try { localStorage.setItem('bom_pseudo', myPseudo); } catch(e){}
+  roomCode = code;
+  isHost = false;
+  waitingPlayers[myId] = {id:myId, pseudo:myPseudo, avatar:myAvatar};
+  document.getElementById('display-code').textContent = roomCode;
+  subscribeRoom(roomCode);
+  broadcastEvent('player_join', {id:myId, pseudo:myPseudo, avatar:myAvatar});
+  renderWaitingRoom();
+  showScreen('screen-waiting');
+  addChat(`Tu as rejoint la salle ${roomCode}`, 'system');
+}
+
+function renderWaitingRoom() {
+  const pls = Object.values(waitingPlayers);
+  const slots = Array.from({length:4}, (_,i) => pls[i] || null);
+  document.getElementById('players-grid').innerHTML = slots.map(p => p
+    ? `<div class="player-slot filled">
+         <div class="avatar">${p.avatar}</div>
+         <div class="pname">${p.pseudo}</div>
+       </div>`
+    : `<div class="player-slot"><div class="pempty">EN ATTENTE...</div></div>`
+  ).join('');
+
+  const count = pls.length;
+  document.getElementById('waiting-status').textContent =
+    `${count} joueur${count>1?'s':''} connecté${count>1?'s':''}`;
+
+  const btn = document.getElementById('btn-launch');
+  if(isHost) {
+    btn.disabled = count < 2;
+    btn.style.display='block';
+  } else {
+    btn.style.display='none';
+  }
+  if(isHost) updateSalleDB();
+}
+
+function lancerPartie() {
+  if(!isHost) return;
+  initGame(waitingPlayers);
+  broadcastEvent('game_start', { gs });
+  // Update room status
+  if(db) db.from('bomberman_rooms').update({status:'playing'}).eq('code',roomCode).catch(()=>{});
+  showScreen('screen-game');
+  startGameLoop();
+}
+
+function quitterSalle() {
+  broadcastEvent('player_leave', {id:myId, pseudo:myPseudo});
+  if(channel) { try{channel.unsubscribe();}catch(e){} channel=null; }
+  if(isHost && db) db.from('bomberman_rooms').delete().eq('code',roomCode).catch(()=>{});
+  retourMenu();
+}
+
+// ═══════════════════════════════════════════════════════════════════
+//  END GAME
+// ═══════════════════════════════════════════════════════════════════
+function checkEndGame() {
+  if(!gs.running) endGame(null);
+}
+
+function endGame(winnerId) {
+  if(gameLoop) { clearInterval(gameLoop); gameLoop=null; }
+  if(timerInterval) { clearInterval(timerInterval); timerInterval=null; }
+  gs.running=false;
+
+  // Final render
+  render();
+
+  const winner = winnerId ? gs.players[winnerId] : null;
+  const sorted = Object.values(gs.players).sort((a,b)=>b.kills-a.kills||a.dead-b.dead);
+
+  // Show overlay briefly then results
+  const overlay = document.getElementById('game-overlay');
+  const ot = document.getElementById('overlay-title');
+  const os = document.getElementById('overlay-sub');
+
+  if(winner) {
+    ot.innerHTML = `${winner.avatar} ${winner.pseudo} GAGNE !`;
+    ot.style.color = winner.id===myId ? '#ffe600' : '#ff3e6c';
+  } else {
+    ot.textContent = '⏰ TEMPS ÉCOULÉ';
+    ot.style.color = '#aaa';
+  }
+  os.textContent = 'Résultats dans 3 secondes...';
+  overlay.classList.add('active');
+
+  setTimeout(() => {
+    overlay.classList.remove('active');
+    // Build results
+    const medals = ['🥇','🥈','🥉'];
+    const podiumHTML = sorted.slice(0,4).map((p,i)=>`
+      <div class="podium-card ${i===0?'first':i===1?'second':i===2?'third':''}">
+        <div class="pod-rank">${medals[i]||'💀'}</div>
+        <div style="font-size:1.6rem">${p.avatar}</div>
+        <div class="pod-name">${p.pseudo}</div>
+        <div class="pod-kills">⚔ ${p.kills} kills</div>
+        ${p.dead?'<div style="font-size:0.35rem;color:#555;margin-top:4px">ÉLIMINÉ</div>':''}
+      </div>`).join('');
+    document.getElementById('result-podium').innerHTML = podiumHTML;
+    showScreen('screen-results');
+    if(db) db.from('bomberman_rooms').delete().eq('code',roomCode).catch(()=>{});
+  }, 3000);
+}
+
+// ═══════════════════════════════════════════════════════════════════
+//  CHAT
+// ═══════════════════════════════════════════════════════════════════
+function envoyerChat() {
+  const inp = document.getElementById('chat-inp');
+  const msg = inp.value.trim();
+  if(!msg) return;
+  broadcastEvent('chat', {pseudo:myPseudo, msg});
+  addChat(`${myPseudo}: ${msg}`, 'player');
+  inp.value='';
+}
+
+function addChat(text, type='player') {
+  const el = document.getElementById('chat-msgs');
+  if(!el) return;
+  const div = document.createElement('div');
+  div.className = `msg-${type}`;
+  div.textContent = text;
+  el.appendChild(div);
+  el.scrollTop = el.scrollHeight;
+}
+
+// ═══════════════════════════════════════════════════════════════════
+//  UTILS
+// ═══════════════════════════════════════════════════════════════════
+function generateCode() {
+  const chars='ABCDEFGHJKLMNPQRSTUVWXYZ';
+  return Array.from({length:4},()=>chars[Math.floor(Math.random()*chars.length)]).join('');
+}
+
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+
+function retourMenu() {
+  if(gameLoop) { clearInterval(gameLoop); gameLoop=null; }
+  if(timerInterval) { clearInterval(timerInterval); timerInterval=null; }
+  if(channel) { try{channel.unsubscribe();}catch(e){} channel=null; }
+  gs = { map:[],players:{},bombs:[],explosions:[],powerups:[],running:false,timeLeft:GAME_DURATION };
+  keys = {up:false,down:false,left:false,right:false,bomb:false};
+  isHost=false; roomCode='';
+  waitingPlayers={};
+  const overlay = document.getElementById('game-overlay');
+  if(overlay) overlay.classList.remove('active');
+  chargerSalles();
+  showScreen('screen-menu');
+}
+
+function toast(msg, type='info') {
+  const el = document.createElement('div');
+  el.className = `toast ${type}`;
+  el.textContent = msg;
+  document.getElementById('toasts').appendChild(el);
+  setTimeout(()=>el.remove(), 3000);
+}
+
+// ═══════════════════════════════════════════════════════════════════
+//  SOLO MODE (test / demo)
+// ═══════════════════════════════════════════════════════════════════
+// Le jeu peut se jouer en solo pour tester le gameplay
+// (entrez un code inexistant et attendez seul – hôte, lancer si 1 joueur)
+document.getElementById('btn-launch').addEventListener('click', ()=>{}, {passive:true});
+
+// Allow solo launch override
+document.getElementById('btn-launch').ondblclick = () => {
+  if(isHost && Object.keys(waitingPlayers).length===1) {
+    // Add fake bot for testing
+    const botId='bot_'+ Math.random().toString(36).slice(2,6);
+    waitingPlayers[botId]={id:botId,pseudo:'BOT',avatar:'🤖'};
+    renderWaitingRoom();
+    setTimeout(lancerPartie,500);
+  }
+};
+
+// ═══════════════════════════════════════════════════════════════════
+//  SUPABASE TABLE CREATION HINT
+// ═══════════════════════════════════════════════════════════════════
+/*
+  Pour le multijoueur, crée cette table dans Supabase SQL Editor :
+
+  CREATE TABLE IF NOT EXISTS bomberman_rooms (
+    code TEXT PRIMARY KEY,
+    host_id TEXT,
+    status TEXT DEFAULT 'waiting',
+    players JSONB DEFAULT '{}',
+    created_at TIMESTAMPTZ DEFAULT NOW()
+  );
+
+  ALTER TABLE bomberman_rooms ENABLE ROW LEVEL SECURITY;
+  CREATE POLICY "public" ON bomberman_rooms FOR ALL USING (true);
+*/
+</script>
+</body>
+</html>
