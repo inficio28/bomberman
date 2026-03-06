@@ -147,41 +147,86 @@ body.in-game .game-topbar { display:block; }
 .ov-title { font-size:clamp(0.8rem,3vw,1.4rem); margin-bottom:12px; }
 .ov-sub { font-size:0.42rem; color:#666; margin-bottom:16px; }
 
-/* CONTROLES MOBILE — split gauche/droite */
+/* CONTROLES MOBILE — collés sur les côtés du canvas en overlay */
 .mobile-ctrl { display:none; }
+.mbtn { background:rgba(255,255,255,0.07); border:2px solid var(--border); border-radius:4px; color:white; font-size:1.1rem; cursor:pointer; display:flex; align-items:center; justify-content:center; user-select:none; -webkit-user-select:none; touch-action:manipulation; }
+.mbtn:active { background:rgba(255,62,108,0.3); }
+
+/* Bouton quitter en jeu (desktop) */
+.btn-quit-game {
+  position:fixed; bottom:16px; right:16px;
+  background:#1e1e30; color:#ff3e6c;
+  border:2px solid #ff3e6c; border-radius:3px;
+  font-family:'Press Start 2P',monospace; font-size:0.32rem;
+  padding:8px 12px; cursor:pointer; letter-spacing:1px;
+  z-index:200; opacity:0.75; transition:opacity 0.15s;
+  display:none;
+}
+.btn-quit-game:hover { opacity:1; }
+body.in-game .btn-quit-game { display:block; }
+
 @media(max-width:680px) {
-  /* Force paysage via meta + hint */
   body.in-game { overflow:hidden; }
   .controls-hint { display:none; }
+
+  /* Le game-wrap devient un conteneur relatif qui contient canvas + contrôles */
+  .overlay-wrap { position:relative; }
+
+  /* Contrôles en position absolue superposés sur les bords du canvas */
   .mobile-ctrl {
-    display:flex; align-items:center; justify-content:space-between;
-    width:100%; padding:4px 8px; gap:8px;
+    display:block;
+    position:absolute;
+    top:0; left:0; right:0; bottom:0;
+    pointer-events:none; /* laisser passer les events sauf sur les boutons */
   }
+
+  /* D-PAD — côté gauche */
   .mobile-dpad {
+    position:absolute;
+    left:6px;
+    bottom:10px;
     display:grid;
-    grid-template-columns:repeat(3,54px);
-    grid-template-rows:repeat(3,54px);
+    grid-template-columns:repeat(3,48px);
+    grid-template-rows:repeat(3,48px);
     gap:3px;
+    pointer-events:all;
   }
+  .mobile-dpad .mbtn {
+    background:rgba(0,0,0,0.55);
+    border:2px solid rgba(255,255,255,0.2);
+    border-radius:6px;
+    font-size:1.2rem;
+    backdrop-filter:blur(2px);
+  }
+  .mobile-dpad .mbtn:active { background:rgba(0,229,255,0.35); border-color:var(--cyan); }
+
+  /* BOMBE — côté droit */
   .mobile-bomb-area {
-    display:flex; align-items:center; justify-content:center;
-    flex-shrink:0;
+    position:absolute;
+    right:10px;
+    bottom:14px;
+    pointer-events:all;
   }
   .mbtn-bomb-big {
-    width:90px; height:90px;
-    background:rgba(255,62,108,0.18);
-    border:3px solid var(--red);
+    width:80px; height:80px;
+    background:rgba(0,0,0,0.55);
+    border:3px solid rgba(255,62,108,0.7);
     border-radius:50%;
     color:white; font-size:2rem;
     cursor:pointer; display:flex; align-items:center; justify-content:center;
     user-select:none; -webkit-user-select:none; touch-action:manipulation;
-    box-shadow:0 0 18px rgba(255,62,108,0.4);
+    box-shadow:0 0 14px rgba(255,62,108,0.35);
+    backdrop-filter:blur(2px);
   }
-  .mbtn-bomb-big:active { background:rgba(255,62,108,0.5); transform:scale(0.93); }
+  .mbtn-bomb-big:active { background:rgba(255,62,108,0.5); transform:scale(0.92); }
+
+  /* Quitter — petit bouton en haut à droite en jeu mobile */
+  .btn-quit-game {
+    bottom:auto; top:8px; right:8px;
+    font-size:0.24rem; padding:5px 8px;
+    opacity:0.6;
+  }
 }
-.mbtn { background:rgba(255,255,255,0.07); border:2px solid var(--border); border-radius:4px; color:white; font-size:1.1rem; cursor:pointer; display:flex; align-items:center; justify-content:center; user-select:none; -webkit-user-select:none; touch-action:manipulation; }
-.mbtn:active { background:rgba(255,62,108,0.3); }
-.mbtn-bomb { background:rgba(255,62,108,0.12); grid-column:2; grid-row:2; font-size:1.3rem; }
 .podium { display:flex; gap:12px; justify-content:center; flex-wrap:wrap; margin:16px 0; }
 .pod-card { background:var(--panel); border:2px solid var(--border); border-radius:4px; padding:14px 18px; text-align:center; min-width:90px; }
 .pod-card.p1{border-color:var(--yellow);} .pod-card.p2{border-color:#aaa;} .pod-card.p3{border-color:#c0622f;}
@@ -293,21 +338,24 @@ body.in-game .game-topbar { display:block; }
         <div class="ov-sub" id="ov-sub">Resultats dans 3s...</div>
         <button class="btn btn-grey" id="btn-menu-ov" style="width:180px;margin-top:8px">MENU</button>
       </div>
+      <!-- Contrôles mobiles en overlay sur les bords du canvas -->
+      <div class="mobile-ctrl" id="mobile-ctrl">
+        <div class="mobile-dpad">
+          <div></div><div class="mbtn" id="mb-up">▲</div><div></div>
+          <div class="mbtn" id="mb-left">◀</div><div></div><div class="mbtn" id="mb-right">▶</div>
+          <div></div><div class="mbtn" id="mb-down">▼</div><div></div>
+        </div>
+        <div class="mobile-bomb-area">
+          <div class="mbtn-bomb-big" id="mb-bomb">💣</div>
+        </div>
+      </div>
     </div>
     <div class="controls-hint"><span>FLECHES/ZQSD</span> MOVE | <span>ESPACE</span> BOMBE</div>
-    <!-- Mobile controls: dpad gauche, bombe droite -->
-    <div class="mobile-ctrl" id="mobile-ctrl">
-      <div class="mobile-dpad">
-        <div></div><div class="mbtn" id="mb-up">▲</div><div></div>
-        <div class="mbtn" id="mb-left">◀</div><div></div><div class="mbtn" id="mb-right">▶</div>
-        <div></div><div class="mbtn" id="mb-down">▼</div><div></div>
-      </div>
-      <div class="mobile-bomb-area">
-        <div class="mbtn-bomb-big" id="mb-bomb">💣</div>
-      </div>
-    </div>
   </div>
 </div>
+
+<!-- Bouton quitter visible pendant la partie -->
+<button class="btn-quit-game" id="btn-quit-game">✕ QUITTER</button>
 
 <!-- RESULTS -->
 <div class="screen" id="screen-results">
@@ -369,6 +417,12 @@ window.addEventListener("load", function() {
   document.getElementById("btn-chat-send").addEventListener("click", envoyerChat);
   document.getElementById("btn-menu-ov").addEventListener("click", retourMenu);
   document.getElementById("btn-menu-res").addEventListener("click", retourMenu);
+  document.getElementById("btn-quit-game").addEventListener("click", function(){
+    if(confirm("Quitter la partie en cours ?")){
+      broadcastEvent("player_leave",{id:myId,pseudo:myPseudo});
+      retourMenu();
+    }
+  });
   document.getElementById("chat-inp").addEventListener("keydown", function(e){ if(e.key==="Enter") envoyerChat(); });
 
   var km={ArrowUp:"up",ArrowDown:"down",ArrowLeft:"left",ArrowRight:"right",z:"up",s:"down",q:"left",d:"right",Z:"up",S:"down",Q:"left",D:"right"," ":"bomb"};
@@ -577,13 +631,33 @@ function broadcastState(){ broadcastEvent("game_state",{players:gs.players,bombs
 
 // DB
 function dbq(fn){ try{fn();}catch(e){} }
+
+async function nettoyerSallesObsoletes(){
+  if(!db) return;
+  try{
+    // Supprime les salles "waiting" non mises à jour depuis plus de 10 minutes
+    var limiteWaiting=new Date(Date.now()-10*60*1000).toISOString();
+    // Supprime les salles "playing" non mises à jour depuis plus de 4 minutes (durée max partie = 3min)
+    var limitePlaying=new Date(Date.now()-4*60*1000).toISOString();
+    await db.from("bomberman_rooms").delete().eq("status","waiting").lt("updated_at",limiteWaiting);
+    await db.from("bomberman_rooms").delete().eq("status","playing").lt("updated_at",limitePlaying);
+  }catch(e){}
+}
+
 async function chargerSalles(){
   if(!db){document.getElementById("rooms-list").innerHTML='<div style="padding:12px;text-align:center;font-size:0.35rem;color:#333">Offline</div>';return;}
+  // Nettoyer les salles obsolètes avant d'afficher
+  await nettoyerSallesObsoletes();
   try{
     var res=await db.from("bomberman_rooms").select("*").eq("status","waiting").order("created_at",{ascending:false}).limit(10);
     var data=res.data, el=document.getElementById("rooms-list");
     if(!data||!data.length){el.innerHTML='<div style="padding:12px;text-align:center;font-size:0.35rem;color:#333">Aucune salle</div>';return;}
-    el.innerHTML=data.map(function(r){ var pls={}; try{pls=JSON.parse(r.players||"{}");}catch(e){} return '<div class="room-item" onclick="rejoindreCode(\''+r.code+'\')"><span class="rname">'+r.code+'</span><span class="rinfo">'+Object.keys(pls).length+'/8</span></div>'; }).join("");
+    el.innerHTML=data.map(function(r){
+      var pls={}; try{pls=JSON.parse(r.players||"{}");}catch(e){}
+      var age=r.updated_at?Math.floor((Date.now()-new Date(r.updated_at).getTime())/1000):null;
+      var ageStr=age!==null?(age<60?age+"s":Math.floor(age/60)+"min"):"";
+      return '<div class="room-item" onclick="rejoindreCode(\''+r.code+'\')"><span class="rname">'+r.code+'</span><span class="rinfo">'+Object.keys(pls).length+'/4 &nbsp;<span style="color:#333;font-size:0.28rem">'+ageStr+'</span></span></div>';
+    }).join("");
   }catch(e){}
 }
 
@@ -597,7 +671,7 @@ function creerSalle(){
   document.getElementById("code-display").textContent=roomCode;
   showScreen("screen-waiting"); renderWaitingRoom();
   if(db) subscribeRoom(roomCode);
-  if(db) db.from("bomberman_rooms").upsert({code:roomCode,host_id:myId,status:"waiting",players:JSON.stringify(waitingPlayers),created_at:new Date().toISOString()}).then(function(){}).catch(function(){});
+  if(db) db.from("bomberman_rooms").upsert({code:roomCode,host_id:myId,status:"waiting",players:JSON.stringify(waitingPlayers),created_at:new Date().toISOString(),updated_at:new Date().toISOString()}).then(function(){}).catch(function(){});
   addChat("Salle "+roomCode+" creee","system");
 }
 
@@ -638,7 +712,7 @@ function renderWaitingRoom(){
   var btn=document.getElementById("btn-launch");
   btn.style.display=isHost?"block":"none";
   if(isHost) btn.textContent=n>=2?"LANCER LA PARTIE":"BESOIN DE 2+ JOUEURS";
-  if(isHost&&db) db.from("bomberman_rooms").update({players:JSON.stringify(waitingPlayers)}).eq("code",roomCode).then(function(){}).catch(function(){});
+  if(isHost&&db) db.from("bomberman_rooms").update({players:JSON.stringify(waitingPlayers),updated_at:new Date().toISOString()}).eq("code",roomCode).then(function(){}).catch(function(){});
 }
 
 function ajouterBot(){
@@ -651,7 +725,7 @@ function ajouterBot(){
   waitingPlayers[bid]={id:bid,pseudo:bots[existing%bots.length],avatar:avatars[existing%avatars.length],isBot:true};
   renderWaitingRoom();
   broadcastEvent("room_sync",{players:waitingPlayers});
-  if(db) db.from("bomberman_rooms").update({players:JSON.stringify(waitingPlayers)}).eq("code",roomCode).then(function(){}).catch(function(){});
+  if(db) db.from("bomberman_rooms").update({players:JSON.stringify(waitingPlayers),updated_at:new Date().toISOString()}).eq("code",roomCode).then(function(){}).catch(function(){});
 }
 
 function retirerBot(bid){
@@ -669,9 +743,16 @@ function lancerPartie(){
   }
   initGame(waitingPlayers);
   broadcastEvent("game_start",{gs:gs});
-  if(db) db.from("bomberman_rooms").update({status:"playing"}).eq("code",roomCode).then(function(){}).catch(function(){});
+  if(db) db.from("bomberman_rooms").update({status:"playing",updated_at:new Date().toISOString()}).eq("code",roomCode).then(function(){}).catch(function(){});
   showScreen("screen-game");
   startGameLoop();
+  // Heartbeat toutes les 60s pour éviter la suppression automatique
+  if(isHost&&db){
+    var heartbeat=setInterval(function(){
+      if(!gs.running){clearInterval(heartbeat);return;}
+      db.from("bomberman_rooms").update({updated_at:new Date().toISOString()}).eq("code",roomCode).catch(function(){});
+    },60000);
+  }
 }
 
 function quitterSalle(){
