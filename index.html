@@ -169,58 +169,63 @@ body.in-game .btn-quit-game { display:block; }
   body.in-game { overflow:hidden; }
   .controls-hint { display:none; }
 
-  /* Le game-wrap devient un conteneur relatif qui contient canvas + contrôles */
-  .overlay-wrap { position:relative; }
-
-  /* Contrôles en position absolue superposés sur les bords du canvas */
-  .mobile-ctrl {
-    display:block;
-    position:absolute;
-    top:0; left:0; right:0; bottom:0;
-    pointer-events:none; /* laisser passer les events sauf sur les boutons */
+  /* overlay-wrap = conteneur relatif qui enveloppe canvas + contrôles */
+  .overlay-wrap {
+    position:relative;
+    display:block; /* pas inline-block pour bien prendre la largeur */
+    line-height:0; /* évite l'espace sous le canvas */
   }
 
-  /* D-PAD — côté gauche */
+  /* Le canvas prend toute la largeur disponible */
+  #gameCanvas { width:100% !important; height:auto !important; }
+
+  /* Contrôles en absolu sur le canvas */
+  .mobile-ctrl {
+    display:block !important;
+    position:absolute;
+    top:0; left:0; right:0; bottom:0;
+    /* PAS de pointer-events:none global — on laisse tout passer naturellement */
+  }
+
+  /* D-PAD — coin bas-gauche */
   .mobile-dpad {
     position:absolute;
     left:6px;
-    bottom:10px;
+    bottom:8px;
     display:grid;
-    grid-template-columns:repeat(3,48px);
-    grid-template-rows:repeat(3,48px);
+    grid-template-columns:repeat(3,50px);
+    grid-template-rows:repeat(3,50px);
     gap:3px;
-    pointer-events:all;
   }
   .mobile-dpad .mbtn {
-    background:rgba(0,0,0,0.55);
-    border:2px solid rgba(255,255,255,0.2);
+    background:rgba(0,0,0,0.6);
+    border:2px solid rgba(255,255,255,0.25);
     border-radius:6px;
-    font-size:1.2rem;
-    backdrop-filter:blur(2px);
+    font-size:1.3rem;
   }
-  .mobile-dpad .mbtn:active { background:rgba(0,229,255,0.35); border-color:var(--cyan); }
+  .mobile-dpad .mbtn:active { background:rgba(0,229,255,0.4); border-color:var(--cyan); }
+  /* Cellule vide du dpad — pas cliquable */
+  .mobile-dpad .dpad-empty { background:none; border:none; pointer-events:none; }
 
-  /* BOMBE — côté droit */
+  /* BOMBE — coin bas-droit */
   .mobile-bomb-area {
     position:absolute;
-    right:10px;
-    bottom:14px;
-    pointer-events:all;
+    right:8px;
+    bottom:8px;
   }
   .mbtn-bomb-big {
-    width:80px; height:80px;
-    background:rgba(0,0,0,0.55);
-    border:3px solid rgba(255,62,108,0.7);
+    width:82px; height:82px;
+    background:rgba(0,0,0,0.6);
+    border:3px solid rgba(255,62,108,0.8);
     border-radius:50%;
-    color:white; font-size:2rem;
+    color:white; font-size:2.2rem;
     cursor:pointer; display:flex; align-items:center; justify-content:center;
     user-select:none; -webkit-user-select:none; touch-action:manipulation;
-    box-shadow:0 0 14px rgba(255,62,108,0.35);
-    backdrop-filter:blur(2px);
+    box-shadow:0 0 16px rgba(255,62,108,0.4);
   }
-  .mbtn-bomb-big:active { background:rgba(255,62,108,0.5); transform:scale(0.92); }
+  .mbtn-bomb-big:active { background:rgba(255,62,108,0.55); transform:scale(0.91); }
 
-  /* Quitter — petit bouton en haut à droite en jeu mobile */
+  /* Quitter — petit bouton en haut à droite */
   .btn-quit-game {
     bottom:auto; top:8px; right:8px;
     font-size:0.24rem; padding:5px 8px;
@@ -341,9 +346,9 @@ body.in-game .btn-quit-game { display:block; }
       <!-- Contrôles mobiles en overlay sur les bords du canvas -->
       <div class="mobile-ctrl" id="mobile-ctrl">
         <div class="mobile-dpad">
-          <div></div><div class="mbtn" id="mb-up">▲</div><div></div>
-          <div class="mbtn" id="mb-left">◀</div><div></div><div class="mbtn" id="mb-right">▶</div>
-          <div></div><div class="mbtn" id="mb-down">▼</div><div></div>
+          <div class="dpad-empty"></div><div class="mbtn" id="mb-up">▲</div><div class="dpad-empty"></div>
+          <div class="mbtn" id="mb-left">◀</div><div class="dpad-empty"></div><div class="mbtn" id="mb-right">▶</div>
+          <div class="dpad-empty"></div><div class="mbtn" id="mb-down">▼</div><div class="dpad-empty"></div>
         </div>
         <div class="mobile-bomb-area">
           <div class="mbtn-bomb-big" id="mb-bomb">💣</div>
@@ -398,7 +403,11 @@ function resizeCanvas(){
   var avW=window.innerWidth-16;
   var avH=window.innerHeight-120;
   var sc=Math.min(avW/W, avH/H, 1);
-  canvas.style.width=(W*sc)+"px"; canvas.style.height=(H*sc)+"px";
+  var cw=Math.floor(W*sc), ch=Math.floor(H*sc);
+  canvas.style.width=cw+"px"; canvas.style.height=ch+"px";
+  // Synchronise l'overlay-wrap pour que les contrôles absolus soient bien positionnés
+  var wrap=document.querySelector(".overlay-wrap");
+  if(wrap){ wrap.style.width=cw+"px"; wrap.style.height=ch+"px"; }
 }
 window.addEventListener("resize",resizeCanvas);
 
@@ -429,12 +438,32 @@ window.addEventListener("load", function() {
   document.addEventListener("keydown",function(e){ var k=km[e.key]; if(k){keys[k]=true; if(k!=="bomb")e.preventDefault();} });
   document.addEventListener("keyup",function(e){ var k=km[e.key]; if(k) keys[k]=false; });
 
-  function mpress(dir,down){ return function(e){ e.preventDefault(); if(dir==="bomb"){ keys.bomb=true; setTimeout(function(){keys.bomb=false;},150); } else keys[dir]=down; }; }
-  document.getElementById("mb-up").addEventListener("touchstart",mpress("up",true)); document.getElementById("mb-up").addEventListener("touchend",mpress("up",false));
-  document.getElementById("mb-down").addEventListener("touchstart",mpress("down",true)); document.getElementById("mb-down").addEventListener("touchend",mpress("down",false));
-  document.getElementById("mb-left").addEventListener("touchstart",mpress("left",true)); document.getElementById("mb-left").addEventListener("touchend",mpress("left",false));
-  document.getElementById("mb-right").addEventListener("touchstart",mpress("right",true)); document.getElementById("mb-right").addEventListener("touchend",mpress("right",false));
-  document.getElementById("mb-bomb").addEventListener("touchstart",mpress("bomb",true));
+  function mpress(dir,down){
+    return function(e){
+      e.preventDefault();
+      e.stopPropagation();
+      if(dir==="bomb"){
+        if(down){ keys.bomb=true; setTimeout(function(){keys.bomb=false;},200); }
+      } else {
+        keys[dir]=down;
+      }
+    };
+  }
+  function bindBtn(id, dir){
+    var el=document.getElementById(id);
+    if(!el) return;
+    el.addEventListener("touchstart", mpress(dir,true),  {passive:false});
+    el.addEventListener("touchend",   mpress(dir,false), {passive:false});
+    el.addEventListener("touchcancel",mpress(dir,false), {passive:false});
+    el.addEventListener("mousedown",  mpress(dir,true));
+    el.addEventListener("mouseup",    mpress(dir,false));
+    el.addEventListener("mouseleave", mpress(dir,false));
+  }
+  bindBtn("mb-up",    "up");
+  bindBtn("mb-down",  "down");
+  bindBtn("mb-left",  "left");
+  bindBtn("mb-right", "right");
+  bindBtn("mb-bomb",  "bomb");
 
   // Topbar toggle
   document.getElementById("topbar-toggle").addEventListener("click", function(){
@@ -635,13 +664,15 @@ function dbq(fn){ try{fn();}catch(e){} }
 async function nettoyerSallesObsoletes(){
   if(!db) return;
   try{
-    // Supprime les salles "waiting" non mises à jour depuis plus de 10 minutes
     var limiteWaiting=new Date(Date.now()-10*60*1000).toISOString();
-    // Supprime les salles "playing" non mises à jour depuis plus de 4 minutes (durée max partie = 3min)
     var limitePlaying=new Date(Date.now()-4*60*1000).toISOString();
+    // Salles sans updated_at (avant migration) — toujours considérées obsolètes
+    await db.from("bomberman_rooms").delete().is("updated_at",null);
+    // Salles waiting trop vieilles
     await db.from("bomberman_rooms").delete().eq("status","waiting").lt("updated_at",limiteWaiting);
+    // Salles playing trop vieilles
     await db.from("bomberman_rooms").delete().eq("status","playing").lt("updated_at",limitePlaying);
-  }catch(e){}
+  }catch(e){ console.warn("nettoyage salles:",e); }
 }
 
 async function chargerSalles(){
