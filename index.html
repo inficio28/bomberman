@@ -457,7 +457,7 @@ body::before {
   <p>MULTIPLAYER · 2D · PIXEL BATTLE</p>
 </div>
 
-<!-- ══════════════════════════════════ SCREEN: MENU ══════════════════════════════════ -->
+<!-- ------------------------------------------------------------ SCREEN: MENU ------------------------------------------------------------ -->
 <div class="screen active" id="screen-menu">
   <div class="menu-box">
     <div class="input-group">
@@ -490,7 +490,7 @@ body::before {
   </div>
 </div>
 
-<!-- ══════════════════════════════════ SCREEN: WAITING ══════════════════════════════════ -->
+<!-- ------------------------------------------------------------ SCREEN: WAITING ------------------------------------------------------------ -->
 <div class="screen" id="screen-waiting">
   <div class="waiting-room">
     <div style="font-size:0.4rem;color:#555;letter-spacing:2px">CODE DE LA SALLE</div>
@@ -510,7 +510,7 @@ body::before {
   </div>
 </div>
 
-<!-- ══════════════════════════════════ SCREEN: GAME ══════════════════════════════════ -->
+<!-- ------------------------------------------------------------ SCREEN: GAME ------------------------------------------------------------ -->
 <div class="screen" id="screen-game">
   <div class="game-sidebar">
     <div class="stat-panel">
@@ -560,7 +560,7 @@ body::before {
   </div>
 </div>
 
-<!-- ══════════════════════════════════ SCREEN: RESULTS ══════════════════════════════════ -->
+<!-- ------------------------------------------------------------ SCREEN: RESULTS ------------------------------------------------------------ -->
 <div class="screen" id="screen-results">
   <div style="text-align:center;padding:20px 0">
     <div style="font-size:clamp(0.8rem,3vw,1.6rem);color:var(--accent3);text-shadow:0 0 10px var(--accent3);margin-bottom:6px">🏆 GAME OVER</div>
@@ -571,17 +571,17 @@ body::before {
 </div>
 
 <script>
-// ═══════════════════════════════════════════════════════════════════
+// ------------------------------------------------------------
 //  CONFIGURATION SUPABASE
 //  !! Remplace par tes propres clés si tu as un projet Supabase !!
 //  (ou le jeu fonctionnera en mode LOCAL uniquement)
-// ═══════════════════════════════════════════════════════════════════
+// ------------------------------------------------------------
 const SUPA_URL = "https://unzbcnrlpeevrxmrtims.supabase.co";
 const SUPA_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVuemJjbnJscGVldnJ4bXJ0aW1zIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI4MDE0OTgsImV4cCI6MjA4ODM3NzQ5OH0.6VNz_v-TD3RLaWe4QLZun4jReYrKHMdWjZ7dprZaLgA";
 
-// ═══════════════════════════════════════════════════════════════════
+// ------------------------------------------------------------
 //  CONSTANTES DU JEU
-// ═══════════════════════════════════════════════════════════════════
+// ------------------------------------------------------------
 const COLS = 15, ROWS = 13;
 const CELL = 44;
 const W = COLS * CELL, H = ROWS * CELL;
@@ -598,11 +598,11 @@ const PLAYER_COLORS = ['#ff3e6c','#00e5ff','#ffe600','#39ff14','#ff6b35','#da77f
 const PLAYER_BG     = ['#3d0012','#001a1f','#1a1600','#001a00','#1a0c00','#1a0025','#1a0012','#001a16'];
 
 // Spawns (x,y in tiles)
-const SPAWNS = [[1,1],[COLS-2,1],[1,ROWS-2],[COLS-2,ROWS-2],[1,ROWS/2|0],[COLS-2,ROWS/2|0],[(COLS/2|0),1],(COLS/2|0,ROWS-2)];
+const SPAWNS = [[1,1],[COLS-2,1],[1,ROWS-2],[COLS-2,ROWS-2],[1,ROWS/2|0],[COLS-2,ROWS/2|0],[(COLS/2|0),1],[(COLS/2|0),ROWS-2]];
 
-// ═══════════════════════════════════════════════════════════════════
+// ------------------------------------------------------------
 //  ÉTAT GLOBAL
-// ═══════════════════════════════════════════════════════════════════
+// ------------------------------------------------------------
 let db = null;
 let myId = Math.random().toString(36).slice(2,10);
 let myPseudo = '', myAvatar = '💣';
@@ -632,9 +632,9 @@ let localBombReq = false;
 // Players list from waiting room
 let waitingPlayers = {};
 
-// ═══════════════════════════════════════════════════════════════════
+// ------------------------------------------------------------
 //  INIT
-// ═══════════════════════════════════════════════════════════════════
+// ------------------------------------------------------------
 window.addEventListener('load', () => {
   try {
     db = supabase.createClient(SUPA_URL, SUPA_KEY);
@@ -655,9 +655,9 @@ function loadPseudo() {
   } catch(e){}
 }
 
-// ═══════════════════════════════════════════════════════════════════
+// ------------------------------------------------------------
 //  CANVAS
-// ═══════════════════════════════════════════════════════════════════
+// ------------------------------------------------------------
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
 function setupCanvas() {
@@ -672,9 +672,9 @@ function setupCanvas() {
   }
 }
 
-// ═══════════════════════════════════════════════════════════════════
+// ------------------------------------------------------------
 //  MAP GENERATION
-// ═══════════════════════════════════════════════════════════════════
+// ------------------------------------------------------------
 function generateMap(seed) {
   // Seeded random for consistency across clients
   let s = seed || 12345;
@@ -695,9 +695,9 @@ function generateMap(seed) {
   return map;
 }
 
-// ═══════════════════════════════════════════════════════════════════
+// ------------------------------------------------------------
 //  DRAWING
-// ═══════════════════════════════════════════════════════════════════
+// ------------------------------------------------------------
 const COLORS = {
   bg: '#1a1a2e',
   wall: '#0d0d1a',
@@ -859,9 +859,9 @@ function render() {
   drawPlayers();
 }
 
-// ═══════════════════════════════════════════════════════════════════
+// ------------------------------------------------------------
 //  GAME LOGIC (Host authoritative)
-// ═══════════════════════════════════════════════════════════════════
+// ------------------------------------------------------------
 function initGame(players) {
   const seed = Date.now() % 99999;
   gs.map = generateMap(seed);
@@ -1006,9 +1006,9 @@ function checkVictory() {
   }
 }
 
-// ═══════════════════════════════════════════════════════════════════
+// ------------------------------------------------------------
 //  GAME LOOP
-// ═══════════════════════════════════════════════════════════════════
+// ------------------------------------------------------------
 function startGameLoop() {
   if(gameLoop) clearInterval(gameLoop);
   gameLoop = setInterval(() => {
@@ -1101,9 +1101,9 @@ function updateHUD() {
   document.getElementById('players-stats').innerHTML = html;
 }
 
-// ═══════════════════════════════════════════════════════════════════
+// ------------------------------------------------------------
 //  KEYBOARD
-// ═══════════════════════════════════════════════════════════════════
+// ------------------------------------------------------------
 function setupKeyboard() {
   const map = {
     'ArrowUp':'up','ArrowDown':'down','ArrowLeft':'left','ArrowRight':'right',
@@ -1127,9 +1127,9 @@ function mobileBomb() {
   setTimeout(()=>keys.bomb=false,150);
 }
 
-// ═══════════════════════════════════════════════════════════════════
+// ------------------------------------------------------------
 //  REALTIME (Supabase Broadcast)
-// ═══════════════════════════════════════════════════════════════════
+// ------------------------------------------------------------
 function subscribeRoom(code) {
   if(channel) { try{channel.unsubscribe();}catch(e){} }
   channel = db.channel(`bomberman_${code}`, {
@@ -1221,9 +1221,9 @@ function broadcastState() {
   });
 }
 
-// ═══════════════════════════════════════════════════════════════════
+// ------------------------------------------------------------
 //  SUPABASE DB
-// ═══════════════════════════════════════════════════════════════════
+// ------------------------------------------------------------
 async function creerSalleDB(code) {
   if(!db) return;
   await db.from('bomberman_rooms').upsert({
@@ -1259,9 +1259,9 @@ async function chargerSalles() {
   } catch(e) {}
 }
 
-// ═══════════════════════════════════════════════════════════════════
+// ------------------------------------------------------------
 //  SALLE D'ATTENTE UI
-// ═══════════════════════════════════════════════════════════════════
+// ------------------------------------------------------------
 function creerSalle() {
   myPseudo = document.getElementById('inp-pseudo').value.trim() || 'Bomber';
   myAvatar = document.getElementById('inp-avatar').value;
@@ -1329,7 +1329,7 @@ function renderWaitingRoom() {
 
 function lancerPartie() {
   console.log('[Bomberman] lancerPartie appelé, isHost=', isHost, 'joueurs=', Object.keys(waitingPlayers));
-  if(!isHost) { toast('Seul l'hôte peut lancer la partie', 'error'); return; }
+  if(!isHost) { toast("Seul l'hote peut lancer la partie", 'error'); return; }
 
   // Si seul, ajouter un bot pour tester
   const count = Object.keys(waitingPlayers).length;
@@ -1353,9 +1353,9 @@ function quitterSalle() {
   retourMenu();
 }
 
-// ═══════════════════════════════════════════════════════════════════
+// ------------------------------------------------------------
 //  END GAME
-// ═══════════════════════════════════════════════════════════════════
+// ------------------------------------------------------------
 function checkEndGame() {
   if(!gs.running) endGame(null);
 }
@@ -1404,9 +1404,9 @@ function endGame(winnerId) {
   }, 3000);
 }
 
-// ═══════════════════════════════════════════════════════════════════
+// ------------------------------------------------------------
 //  CHAT
-// ═══════════════════════════════════════════════════════════════════
+// ------------------------------------------------------------
 function envoyerChat() {
   const inp = document.getElementById('chat-inp');
   const msg = inp.value.trim();
@@ -1426,9 +1426,9 @@ function addChat(text, type='player') {
   el.scrollTop = el.scrollHeight;
 }
 
-// ═══════════════════════════════════════════════════════════════════
+// ------------------------------------------------------------
 //  UTILS
-// ═══════════════════════════════════════════════════════════════════
+// ------------------------------------------------------------
 function generateCode() {
   const chars='ABCDEFGHJKLMNPQRSTUVWXYZ';
   return Array.from({length:4},()=>chars[Math.floor(Math.random()*chars.length)]).join('');
@@ -1461,9 +1461,9 @@ function toast(msg, type='info') {
   setTimeout(()=>el.remove(), 3000);
 }
 
-// ═══════════════════════════════════════════════════════════════════
+// ------------------------------------------------------------
 //  SUPABASE TABLE CREATION HINT
-// ═══════════════════════════════════════════════════════════════════
+// ------------------------------------------------------------
 /*
   Pour le multijoueur, crée cette table dans Supabase SQL Editor :
 
