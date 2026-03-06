@@ -2,7 +2,21 @@
 <html lang="fr">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+  <!-- Force landscape on mobile when in game -->
+  <style>
+    @media screen and (max-width:680px) and (orientation:portrait) {
+      body.in-game::after {
+        content:'↻ TOURNE TON TÉLÉPHONE';
+        position:fixed; inset:0; background:#0a0a0f;
+        display:flex; align-items:center; justify-content:center;
+        font-family:'Press Start 2P',monospace; font-size:0.55rem;
+        color:var(--yellow); text-align:center; padding:20px;
+        z-index:99999; white-space:pre-wrap;
+        line-height:2;
+      }
+    }
+  </style>
 <title>💣 BomberOnline</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.38.4/dist/umd/supabase.min.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
@@ -14,9 +28,47 @@
 * { margin:0; padding:0; box-sizing:border-box; }
 body { background:var(--bg); font-family:'Press Start 2P',monospace; color:white; min-height:100vh; display:flex; flex-direction:column; align-items:center; overflow-x:hidden; }
 body::before { content:''; position:fixed; inset:0; background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,0.07) 2px,rgba(0,0,0,0.07) 4px); pointer-events:none; z-index:9999; }
+
+/* HEADER — visible uniquement hors jeu */
 .header { text-align:center; padding:20px 0 12px; }
 .header h1 { font-size:clamp(1rem,4vw,1.8rem); color:var(--yellow); text-shadow:0 0 10px var(--yellow),3px 3px 0 #8a7000; letter-spacing:3px; }
 .header p { font-size:0.38rem; color:var(--cyan); margin-top:6px; letter-spacing:3px; opacity:0.6; }
+body.in-game .header { display:none; }
+
+/* BANDE COLLAPSIBLE en jeu */
+.game-topbar {
+  display:none; width:100%; background:var(--panel);
+  border-bottom:1px solid var(--border);
+  position:sticky; top:0; z-index:100;
+}
+body.in-game .game-topbar { display:block; }
+.topbar-toggle {
+  width:100%; background:none; border:none; color:var(--cyan);
+  font-family:'Press Start 2P',monospace; font-size:0.28rem;
+  padding:3px 8px; cursor:pointer; display:flex; align-items:center; justify-content:space-between;
+  letter-spacing:1px;
+}
+.topbar-toggle .tbarrow { transition:transform 0.2s; display:inline-block; }
+.topbar-toggle.collapsed .tbarrow { transform:rotate(180deg); }
+.topbar-content {
+  display:flex; flex-wrap:wrap; gap:6px; padding:4px 8px 6px;
+  transition:max-height 0.25s ease, opacity 0.25s;
+  max-height:120px; overflow:hidden; opacity:1;
+}
+.topbar-content.collapsed { max-height:0; opacity:0; padding:0 8px; }
+.topbar-section { display:flex; flex-direction:column; gap:2px; min-width:90px; }
+.topbar-label { font-size:0.22rem; color:var(--cyan); letter-spacing:1px; margin-bottom:1px; opacity:0.7; }
+.topbar-players { display:flex; flex-wrap:wrap; gap:4px; }
+.topbar-pstat { display:flex; align-items:center; gap:3px; font-size:0.26rem; background:#0d0d1a; border:1px solid var(--border); border-radius:2px; padding:2px 4px; }
+.topbar-pstat.dead { opacity:0.35; }
+.topbar-pstat.dead .tps-name { text-decoration:line-through; }
+.topbar-pstat.me .tps-name { color:var(--yellow); }
+.tps-avatar { font-size:0.7rem; }
+.tps-name { max-width:55px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:#bbb; }
+.tps-hp { color:var(--red); font-size:0.22rem; margin-left:2px; }
+.topbar-stuff { display:flex; gap:6px; align-items:center; font-size:0.26rem; color:#888; }
+.topbar-stuff .tv { color:var(--yellow); margin-left:2px; }
+
 .screen { display:none; width:100%; max-width:860px; padding:0 12px 20px; }
 .screen.active { display:flex; flex-direction:column; align-items:center; }
 .card { background:var(--panel); border:2px solid var(--border); border-radius:4px; padding:24px; width:100%; max-width:460px; position:relative; }
@@ -50,6 +102,12 @@ body::before { content:''; position:fixed; inset:0; background:repeating-linear-
 .pslot .pavatar { font-size:1.5rem; }
 .pslot .pname { color:white; word-break:break-all; }
 .pslot .pempty { color:#333; }
+.pslot.bot { border-color:#da77f2; background:rgba(218,119,242,0.05); }
+.pslot.bot .pname { color:#da77f2; }
+.slot-actions { display:flex; gap:3px; margin-top:4px; width:100%; }
+.slot-btn { flex:1; background:#1a1a2e; border:1px solid var(--border); color:#aaa; font-family:"Press Start 2P",monospace; font-size:0.28rem; padding:3px 2px; border-radius:2px; cursor:pointer; transition:all 0.15s; }
+.slot-btn:hover { border-color:var(--cyan); color:var(--cyan); }
+.slot-btn.active { border-color:var(--green); color:var(--green); background:rgba(57,255,20,0.08); }
 .wait-status { font-size:0.38rem; color:#555; margin:6px 0; }
 .chat-box { background:var(--panel); border:2px solid var(--border); border-radius:3px; padding:8px; width:100%; max-width:520px; margin-top:10px; }
 .chat-msgs { height:70px; overflow-y:auto; font-size:0.32rem; color:#555; line-height:1.9; margin-bottom:5px; }
@@ -58,8 +116,13 @@ body::before { content:''; position:fixed; inset:0; background:repeating-linear-
 .chat-row { display:flex; gap:5px; }
 .chat-row input { flex:1; background:#0d0d1a; border:1px solid var(--border); color:white; font-family:'Press Start 2P',monospace; font-size:0.35rem; padding:6px 8px; border-radius:2px; outline:none; }
 .chat-row button { background:var(--cyan); color:#000; font-family:'Press Start 2P',monospace; font-size:0.32rem; padding:6px 10px; border:none; border-radius:2px; cursor:pointer; white-space:nowrap; }
-#screen-game { flex-direction:row; align-items:flex-start; gap:12px; padding:0 8px 16px; }
-.sidebar { width:150px; flex-shrink:0; display:flex; flex-direction:column; gap:8px; }
+/* GAME SCREEN — maximise l'espace canvas */
+#screen-game {
+  flex-direction:column; align-items:center; gap:4px;
+  padding:0 4px 8px; width:100%; max-width:none;
+}
+/* sidebar cachée en jeu — infos remontées dans topbar */
+.sidebar { display:none; }
 .stat-card { background:var(--panel); border:2px solid var(--border); border-radius:3px; padding:8px; }
 .stat-title { font-size:0.3rem; color:var(--cyan); letter-spacing:2px; margin-bottom:7px; }
 .pstat { display:flex; align-items:center; gap:5px; padding:4px 0; border-bottom:1px solid var(--border); font-size:0.32rem; }
@@ -71,20 +134,51 @@ body::before { content:''; position:fixed; inset:0; background:repeating-linear-
 .pstat .pshp { color:var(--red); font-size:0.28rem; }
 .pu-row { display:flex; justify-content:space-between; font-size:0.32rem; padding:2px 0; color:#888; }
 .pu-val { color:var(--yellow); }
-.game-wrap { flex:1; display:flex; flex-direction:column; align-items:center; gap:6px; }
-.game-hud { display:flex; align-items:center; gap:14px; font-size:0.38rem; }
-.hud-timer { color:var(--yellow); font-size:0.65rem; text-shadow:0 0 8px var(--yellow); }
+.game-wrap { flex:1; display:flex; flex-direction:column; align-items:center; gap:3px; width:100%; }
+.game-hud { display:flex; align-items:center; gap:10px; font-size:0.34rem; }
+.hud-timer { color:var(--yellow); font-size:0.55rem; text-shadow:0 0 8px var(--yellow); }
 .hud-label { color:#444; }
-#gameCanvas { border:3px solid var(--border); box-shadow:0 0 25px rgba(255,62,108,0.15); display:block; image-rendering:pixelated; }
-.controls-hint { font-size:0.3rem; color:#333; letter-spacing:1px; }
+#gameCanvas { border:3px solid var(--border); box-shadow:0 0 25px rgba(255,62,108,0.15); display:block; image-rendering:pixelated; max-width:100%; }
+.controls-hint { font-size:0.28rem; color:#333; letter-spacing:1px; }
 .controls-hint span { color:var(--cyan); }
-.overlay-wrap { position:relative; display:inline-block; }
+.overlay-wrap { position:relative; display:inline-block; max-width:100%; }
 .game-overlay { position:absolute; inset:0; background:rgba(0,0,0,0.88); display:none; flex-direction:column; align-items:center; justify-content:center; z-index:10; text-align:center; }
 .game-overlay.show { display:flex; }
 .ov-title { font-size:clamp(0.8rem,3vw,1.4rem); margin-bottom:12px; }
 .ov-sub { font-size:0.42rem; color:#666; margin-bottom:16px; }
-.mobile-ctrl { display:none; grid-template-columns:repeat(3,52px); grid-template-rows:repeat(3,52px); gap:4px; margin-top:6px; }
-@media(max-width:680px) { .mobile-ctrl{display:grid;} #screen-game{flex-direction:column;} .sidebar{width:100%;flex-direction:row;flex-wrap:wrap;} .stat-card{flex:1;min-width:130px;} }
+
+/* CONTROLES MOBILE — split gauche/droite */
+.mobile-ctrl { display:none; }
+@media(max-width:680px) {
+  /* Force paysage via meta + hint */
+  body.in-game { overflow:hidden; }
+  .controls-hint { display:none; }
+  .mobile-ctrl {
+    display:flex; align-items:center; justify-content:space-between;
+    width:100%; padding:4px 8px; gap:8px;
+  }
+  .mobile-dpad {
+    display:grid;
+    grid-template-columns:repeat(3,54px);
+    grid-template-rows:repeat(3,54px);
+    gap:3px;
+  }
+  .mobile-bomb-area {
+    display:flex; align-items:center; justify-content:center;
+    flex-shrink:0;
+  }
+  .mbtn-bomb-big {
+    width:90px; height:90px;
+    background:rgba(255,62,108,0.18);
+    border:3px solid var(--red);
+    border-radius:50%;
+    color:white; font-size:2rem;
+    cursor:pointer; display:flex; align-items:center; justify-content:center;
+    user-select:none; -webkit-user-select:none; touch-action:manipulation;
+    box-shadow:0 0 18px rgba(255,62,108,0.4);
+  }
+  .mbtn-bomb-big:active { background:rgba(255,62,108,0.5); transform:scale(0.93); }
+}
 .mbtn { background:rgba(255,255,255,0.07); border:2px solid var(--border); border-radius:4px; color:white; font-size:1.1rem; cursor:pointer; display:flex; align-items:center; justify-content:center; user-select:none; -webkit-user-select:none; touch-action:manipulation; }
 .mbtn:active { background:rgba(255,62,108,0.3); }
 .mbtn-bomb { background:rgba(255,62,108,0.12); grid-column:2; grid-row:2; font-size:1.3rem; }
@@ -102,6 +196,28 @@ body::before { content:''; position:fixed; inset:0; background:repeating-linear-
 </head>
 <body>
 <div class="toasts" id="toasts"></div>
+
+<!-- BANDE INFOS EN JEU (collapsible) -->
+<div class="game-topbar" id="game-topbar">
+  <button class="topbar-toggle" id="topbar-toggle">
+    <span id="topbar-summary">JOUEURS &nbsp;|&nbsp; STUFF</span>
+    <span class="tbarrow">▲</span>
+  </button>
+  <div class="topbar-content" id="topbar-content">
+    <div class="topbar-section">
+      <div class="topbar-label">JOUEURS</div>
+      <div class="topbar-players" id="tb-players"></div>
+    </div>
+    <div class="topbar-section">
+      <div class="topbar-label">MON STUFF</div>
+      <div class="topbar-stuff">
+        💣<span class="tv" id="tb-bombs">1</span>
+        &nbsp;🔥<span class="tv" id="tb-flame">2</span>
+        &nbsp;💨<span class="tv" id="tb-speed">1</span>
+      </div>
+    </div>
+  </div>
+</div>
 <div class="header">
   <h1>BOMBER ONLINE</h1>
   <p>MULTIPLAYER 2D PIXEL BATTLE</p>
@@ -164,18 +280,6 @@ body::before { content:''; position:fixed; inset:0; background:repeating-linear-
 
 <!-- GAME -->
 <div class="screen" id="screen-game">
-  <div class="sidebar">
-    <div class="stat-card">
-      <div class="stat-title">JOUEURS</div>
-      <div id="players-stats"></div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-title">MON STUFF</div>
-      <div class="pu-row"><span>Bombes</span><span class="pu-val" id="pu-bombs">1</span></div>
-      <div class="pu-row"><span>Flammes</span><span class="pu-val" id="pu-flame">2</span></div>
-      <div class="pu-row"><span>Vitesse</span><span class="pu-val" id="pu-speed">1</span></div>
-    </div>
-  </div>
   <div class="game-wrap">
     <div class="game-hud">
       <span class="hud-label">TEMPS</span>
@@ -191,12 +295,16 @@ body::before { content:''; position:fixed; inset:0; background:repeating-linear-
       </div>
     </div>
     <div class="controls-hint"><span>FLECHES/ZQSD</span> MOVE | <span>ESPACE</span> BOMBE</div>
-    <div class="mobile-ctrl">
-      <div></div><div class="mbtn" id="mb-up">UP</div><div></div>
-      <div class="mbtn" id="mb-left">LT</div>
-      <div class="mbtn mbtn-bomb" id="mb-bomb">B</div>
-      <div class="mbtn" id="mb-right">RT</div>
-      <div></div><div class="mbtn" id="mb-down">DN</div><div></div>
+    <!-- Mobile controls: dpad gauche, bombe droite -->
+    <div class="mobile-ctrl" id="mobile-ctrl">
+      <div class="mobile-dpad">
+        <div></div><div class="mbtn" id="mb-up">▲</div><div></div>
+        <div class="mbtn" id="mb-left">◀</div><div></div><div class="mbtn" id="mb-right">▶</div>
+        <div></div><div class="mbtn" id="mb-down">▼</div><div></div>
+      </div>
+      <div class="mobile-bomb-area">
+        <div class="mbtn-bomb-big" id="mb-bomb">💣</div>
+      </div>
     </div>
   </div>
 </div>
@@ -238,11 +346,18 @@ var lastMove=0, lastBomb=0;
 var canvas=document.getElementById("gameCanvas");
 var ctx=canvas.getContext("2d");
 
+function resizeCanvas(){
+  var avW=window.innerWidth-16;
+  var avH=window.innerHeight-120;
+  var sc=Math.min(avW/W, avH/H, 1);
+  canvas.style.width=(W*sc)+"px"; canvas.style.height=(H*sc)+"px";
+}
+window.addEventListener("resize",resizeCanvas);
+
 window.addEventListener("load", function() {
   try { db=supabase.createClient(SUPA_URL,SUPA_KEY); } catch(e){ toast("Supabase offline","err"); }
   canvas.width=W; canvas.height=H;
-  var maxW=Math.min(window.innerWidth-180,660);
-  if(W>maxW){ var sc=maxW/W; canvas.style.width=(W*sc)+"px"; canvas.style.height=(H*sc)+"px"; }
+  resizeCanvas();
 
   try { var p=localStorage.getItem("bom_p"); if(p) document.getElementById("inp-pseudo").value=p; } catch(e){}
 
@@ -266,6 +381,14 @@ window.addEventListener("load", function() {
   document.getElementById("mb-left").addEventListener("touchstart",mpress("left",true)); document.getElementById("mb-left").addEventListener("touchend",mpress("left",false));
   document.getElementById("mb-right").addEventListener("touchstart",mpress("right",true)); document.getElementById("mb-right").addEventListener("touchend",mpress("right",false));
   document.getElementById("mb-bomb").addEventListener("touchstart",mpress("bomb",true));
+
+  // Topbar toggle
+  document.getElementById("topbar-toggle").addEventListener("click", function(){
+    var content=document.getElementById("topbar-content");
+    var btn=document.getElementById("topbar-toggle");
+    content.classList.toggle("collapsed");
+    btn.classList.toggle("collapsed");
+  });
 
   chargerSalles();
   setInterval(chargerSalles,8000);
@@ -368,7 +491,7 @@ function explodeBomb(bombId){
 
 function checkVictory(){
   var alive=Object.values(gs.players).filter(function(p){return !p.dead;});
-  if(alive.length<=1){ gs.running=false; if(isHost) setTimeout(function(){broadcastState(); broadcastEvent("game_over",{winner:alive.length?alive[0].id:null});},500); }
+  if(alive.length<=1){ gs.running=false; if(isHost) setTimeout(function(){ broadcastState(); var winnerId=alive.length?alive[0].id:null; broadcastEvent("game_over",{winner:winnerId}); endGame(winnerId); },500); }
 }
 
 function startGameLoop(){
@@ -379,7 +502,7 @@ function startGameLoop(){
     render(); updateHUD();
     if(isHost&&Date.now()%(TICK*3)<TICK) broadcastState();
   },TICK);
-  if(isHost) timerInterval=setInterval(function(){ if(!gs.running) return; gs.timeLeft--; if(gs.timeLeft<=0){gs.running=false;broadcastEvent("game_over",{winner:null});} },1000);
+  if(isHost) timerInterval=setInterval(function(){ if(!gs.running) return; gs.timeLeft--; if(gs.timeLeft<=0){gs.running=false;broadcastEvent("game_over",{winner:null});endGame(null);} },1000);
 }
 
 function processInput(){
@@ -401,8 +524,21 @@ function updateHUD(){
   var alive=Object.values(gs.players).filter(function(p){return !p.dead;}).length;
   document.getElementById("hud-alive").textContent=alive+" en vie";
   var me=gs.players[myId];
-  if(me){ document.getElementById("pu-bombs").textContent=me.bombs; document.getElementById("pu-flame").textContent=me.flame; document.getElementById("pu-speed").textContent=me.speed; }
-  document.getElementById("players-stats").innerHTML=Object.values(gs.players).map(function(p){ return '<div class="pstat'+(p.dead?" dead":"")+(p.id===myId?" me":"")+'"><span class="psavatar">'+p.avatar+'</span><span class="psname">'+p.pseudo+'</span><span class="pshp">'+(p.dead?"X":"HP:"+p.hp)+'</span></div>'; }).join("");
+  if(me){
+    document.getElementById("tb-bombs").textContent=me.bombs;
+    document.getElementById("tb-flame").textContent=me.flame;
+    document.getElementById("tb-speed").textContent=me.speed;
+    // compat with old IDs in case anything references them
+    var pb=document.getElementById("pu-bombs"); if(pb) pb.textContent=me.bombs;
+    var pf=document.getElementById("pu-flame"); if(pf) pf.textContent=me.flame;
+    var ps=document.getElementById("pu-speed"); if(ps) ps.textContent=me.speed;
+  }
+  document.getElementById("tb-players").innerHTML=Object.values(gs.players).map(function(p){
+    return '<div class="topbar-pstat'+(p.dead?" dead":"")+(p.id===myId?" me":"")+'"><span class="tps-avatar">'+p.avatar+'</span><span class="tps-name">'+p.pseudo+'</span><span class="tps-hp">'+(p.dead?"✖":"♥"+p.hp)+'</span></div>';
+  }).join("");
+  // legacy sidebar (hidden but keep for compat)
+  var pstats=document.getElementById("players-stats");
+  if(pstats) pstats.innerHTML=Object.values(gs.players).map(function(p){ return '<div class="pstat'+(p.dead?" dead":"")+(p.id===myId?" me":"")+'"><span class="psavatar">'+p.avatar+'</span><span class="psname">'+p.pseudo+'</span><span class="pshp">'+(p.dead?"X":"HP:"+p.hp)+'</span></div>'; }).join("");
 }
 
 function pad(n){ return String(n).padStart(2,"0"); }
@@ -429,7 +565,7 @@ function subscribeRoom(code){
       showScreen("screen-game"); startGameLoop();
     })
     .on("broadcast",{event:"game_state"},function(msg){
-      if(!isHost){ var s=msg.payload; gs.players=s.players; gs.bombs=s.bombs; gs.explosions=s.explosions; gs.powerups=s.powerups; gs.running=s.running; gs.timeLeft=s.timeLeft; if(!gs.running) endGame(null); render(); updateHUD(); }
+      if(!isHost){ var s=msg.payload; gs.players=s.players; gs.bombs=s.bombs; gs.explosions=s.explosions; gs.powerups=s.powerups; if(s.map) gs.map=s.map; gs.running=s.running; gs.timeLeft=s.timeLeft; if(!gs.running) endGame(null); render(); updateHUD(); }
     })
     .on("broadcast",{event:"player_input"},function(msg){ if(isHost){ var p=msg.payload; if(p.dir) tryMove(p.pid,p.dir); if(p.bomb) tryPlaceBomb(p.pid); } })
     .on("broadcast",{event:"game_over"},function(msg){ gs.running=false; endGame(msg.payload.winner); })
@@ -437,7 +573,7 @@ function subscribeRoom(code){
 }
 
 function broadcastEvent(ev,payload){ if(!channel) return; try{channel.send({type:"broadcast",event:ev,payload:payload});}catch(e){} }
-function broadcastState(){ broadcastEvent("game_state",{players:gs.players,bombs:gs.bombs,explosions:gs.explosions,powerups:gs.powerups,running:gs.running,timeLeft:gs.timeLeft}); }
+function broadcastState(){ broadcastEvent("game_state",{players:gs.players,bombs:gs.bombs,explosions:gs.explosions,powerups:gs.powerups,map:gs.map,running:gs.running,timeLeft:gs.timeLeft}); }
 
 // DB
 function dbq(fn){ try{fn();}catch(e){} }
@@ -485,20 +621,51 @@ function rejoindreCode(code){
 
 function renderWaitingRoom(){
   var pls=Object.values(waitingPlayers);
-  document.getElementById("players-grid").innerHTML=[0,1,2,3].map(function(i){ var p=pls[i]; return p?'<div class="pslot filled"><div class="pavatar">'+p.avatar+'</div><div class="pname">'+p.pseudo+'</div></div>':'<div class="pslot"><div class="pempty">LIBRE</div></div>'; }).join("");
-  var n=pls.length;
+  var humanCount=pls.filter(function(p){return !p.isBot;}).length;
+  var totalCount=pls.length;
+  document.getElementById("players-grid").innerHTML=[0,1,2,3].map(function(i){
+    var p=pls[i];
+    if(p){
+      var isBot=p.isBot;
+      var removeBtn=isHost&&isBot?'<div class="slot-actions"><button class="slot-btn" onclick="retirerBot(\''+p.id+'\')" style="color:#ff3e6c;border-color:#ff3e6c">RETIRER</button></div>':""
+      return '<div class="pslot '+(isBot?"bot":"filled")+'"><div class="pavatar">'+p.avatar+'</div><div class="pname">'+p.pseudo+'</div>'+removeBtn+'</div>';
+    }
+    var addBotBtn=isHost?'<div class="slot-actions"><button class="slot-btn" onclick="ajouterBot()">+ BOT</button></div>':'<div class="pempty">LIBRE</div>';
+    return '<div class="pslot"><div class="pempty" style="font-size:0.3rem">EN ATTENTE</div>'+addBotBtn+'</div>';
+  }).join("");
+  var n=totalCount;
   document.getElementById("wait-status").textContent=n+" joueur"+(n>1?"s":"")+" connecte"+(n>1?"s":"");
   var btn=document.getElementById("btn-launch");
   btn.style.display=isHost?"block":"none";
-  if(isHost) btn.textContent=n>=2?"LANCER LA PARTIE":"LANCER (BOT)";
+  if(isHost) btn.textContent=n>=2?"LANCER LA PARTIE":"BESOIN DE 2+ JOUEURS";
   if(isHost&&db) db.from("bomberman_rooms").update({players:JSON.stringify(waitingPlayers)}).eq("code",roomCode).then(function(){}).catch(function(){});
+}
+
+function ajouterBot(){
+  if(!isHost) return;
+  var bots=["BOT Alpha","BOT Bravo","BOT Charlie","BOT Delta","BOT Echo","BOT Foxtrot"];
+  var avatars=["🤖","👾","💀","🎮","⚡","🔥"];
+  var existing=Object.values(waitingPlayers).filter(function(p){return p.isBot;}).length;
+  if(Object.keys(waitingPlayers).length>=4) return;
+  var bid="bot_"+Math.random().toString(36).slice(2,6);
+  waitingPlayers[bid]={id:bid,pseudo:bots[existing%bots.length],avatar:avatars[existing%avatars.length],isBot:true};
+  renderWaitingRoom();
+  broadcastEvent("room_sync",{players:waitingPlayers});
+  if(db) db.from("bomberman_rooms").update({players:JSON.stringify(waitingPlayers)}).eq("code",roomCode).then(function(){}).catch(function(){});
+}
+
+function retirerBot(bid){
+  if(!isHost) return;
+  delete waitingPlayers[bid];
+  renderWaitingRoom();
+  broadcastEvent("room_sync",{players:waitingPlayers});
 }
 
 function lancerPartie(){
   if(!isHost) return;
   if(Object.keys(waitingPlayers).length<2){
-    var bid="bot_"+Math.random().toString(36).slice(2,6);
-    waitingPlayers[bid]={id:bid,pseudo:"BOT",avatar:"🤖"};
+    toast("Ajoute au moins 1 BOT ou attends un joueur","err");
+    return;
   }
   initGame(waitingPlayers);
   broadcastEvent("game_start",{gs:gs});
@@ -535,7 +702,7 @@ function endGame(winnerId){
 
 function envoyerChat(){ var inp=document.getElementById("chat-inp"),msg=inp.value.trim(); if(!msg) return; broadcastEvent("chat",{pseudo:myPseudo,msg:msg}); addChat(myPseudo+": "+msg,"player"); inp.value=""; }
 function addChat(text,type){ var el=document.getElementById("chat-msgs"); if(!el) return; var d=document.createElement("div"); d.className="cm-"+(type||"player"); d.textContent=text; el.appendChild(d); el.scrollTop=el.scrollHeight; }
-function showScreen(id){ document.querySelectorAll(".screen").forEach(function(s){s.classList.remove("active");}); document.getElementById(id).classList.add("active"); }
+function showScreen(id){ document.querySelectorAll(".screen").forEach(function(s){s.classList.remove("active");}); document.getElementById(id).classList.add("active"); if(id==="screen-game"){ document.body.classList.add("in-game"); resizeCanvas(); } else { document.body.classList.remove("in-game"); } }
 function retourMenu(){ if(gameLoop){clearInterval(gameLoop);gameLoop=null;} if(timerInterval){clearInterval(timerInterval);timerInterval=null;} if(channel){try{channel.unsubscribe();}catch(e){} channel=null;} gs={map:[],players:{},bombs:[],explosions:[],powerups:[],running:false,timeLeft:GAME_DURATION}; keys={up:false,down:false,left:false,right:false,bomb:false}; isHost=false; roomCode=""; waitingPlayers={}; document.getElementById("game-overlay").classList.remove("show"); chargerSalles(); showScreen("screen-menu"); }
 function genCode(){ var c="ABCDEFGHJKLMNPQRSTUVWXYZ"; return [0,1,2,3].map(function(){return c[Math.floor(Math.random()*c.length)];}).join(""); }
 function toast(msg,type){ var el=document.createElement("div"); el.className="toast "+(type||""); el.textContent=msg; document.getElementById("toasts").appendChild(el); setTimeout(function(){el.remove();},3000); }
