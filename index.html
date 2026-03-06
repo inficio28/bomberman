@@ -147,90 +147,87 @@ body.in-game .game-topbar { display:block; }
 .ov-title { font-size:clamp(0.8rem,3vw,1.4rem); margin-bottom:12px; }
 .ov-sub { font-size:0.42rem; color:#666; margin-bottom:16px; }
 
-/* CONTROLES MOBILE — collés sur les côtés du canvas en overlay */
+/* CONTROLES MOBILE — fixed sur les bords de l'écran */
 .mobile-ctrl { display:none; }
 .mbtn { background:rgba(255,255,255,0.07); border:2px solid var(--border); border-radius:4px; color:white; font-size:1.1rem; cursor:pointer; display:flex; align-items:center; justify-content:center; user-select:none; -webkit-user-select:none; touch-action:manipulation; }
 .mbtn:active { background:rgba(255,62,108,0.3); }
 
-/* Bouton quitter en jeu (desktop) */
+/* Bouton quitter en jeu */
 .btn-quit-game {
-  position:fixed; bottom:16px; right:16px;
-  background:#1e1e30; color:#ff3e6c;
+  position:fixed; top:8px; right:8px;
+  background:rgba(30,30,48,0.85); color:#ff3e6c;
   border:2px solid #ff3e6c; border-radius:3px;
-  font-family:'Press Start 2P',monospace; font-size:0.32rem;
-  padding:8px 12px; cursor:pointer; letter-spacing:1px;
-  z-index:200; opacity:0.75; transition:opacity 0.15s;
+  font-family:'Press Start 2P',monospace; font-size:0.28rem;
+  padding:6px 10px; cursor:pointer; letter-spacing:1px;
+  z-index:500; opacity:0.8; transition:opacity 0.15s;
   display:none;
 }
 .btn-quit-game:hover { opacity:1; }
 body.in-game .btn-quit-game { display:block; }
 
-@media(max-width:680px) {
+@media(max-width:900px) and (orientation:landscape) {
   body.in-game { overflow:hidden; }
   .controls-hint { display:none; }
 
-  /* overlay-wrap = conteneur relatif qui enveloppe canvas + contrôles */
-  .overlay-wrap {
-    position:relative;
-    display:block; /* pas inline-block pour bien prendre la largeur */
-    line-height:0; /* évite l'espace sous le canvas */
-  }
-
-  /* Le canvas prend toute la largeur disponible */
-  #gameCanvas { width:100% !important; height:auto !important; }
-
-  /* Contrôles en absolu sur le canvas */
+  /* D-PAD fixé sur le bord gauche de l'écran, centré verticalement */
   .mobile-ctrl {
     display:block !important;
-    position:absolute;
-    top:0; left:0; right:0; bottom:0;
-    /* PAS de pointer-events:none global — on laisse tout passer naturellement */
   }
-
-  /* D-PAD — coin bas-gauche */
   .mobile-dpad {
-    position:absolute;
+    position:fixed;
     left:6px;
-    bottom:8px;
+    bottom:12px;
+    z-index:300;
     display:grid;
-    grid-template-columns:repeat(3,50px);
-    grid-template-rows:repeat(3,50px);
-    gap:3px;
+    grid-template-columns:repeat(3,52px);
+    grid-template-rows:repeat(3,52px);
+    gap:4px;
   }
   .mobile-dpad .mbtn {
-    background:rgba(0,0,0,0.6);
-    border:2px solid rgba(255,255,255,0.25);
-    border-radius:6px;
-    font-size:1.3rem;
+    background:rgba(10,10,20,0.75);
+    border:2px solid rgba(255,255,255,0.3);
+    border-radius:8px;
+    font-size:1.4rem;
+    box-shadow:0 2px 8px rgba(0,0,0,0.5);
   }
-  .mobile-dpad .mbtn:active { background:rgba(0,229,255,0.4); border-color:var(--cyan); }
-  /* Cellule vide du dpad — pas cliquable */
-  .mobile-dpad .dpad-empty { background:none; border:none; pointer-events:none; }
+  .mobile-dpad .mbtn:active {
+    background:rgba(0,229,255,0.4);
+    border-color:var(--cyan);
+    transform:scale(0.93);
+  }
+  .dpad-empty {
+    background:none !important;
+    border:none !important;
+    box-shadow:none !important;
+    pointer-events:none;
+  }
 
-  /* BOMBE — coin bas-droit */
+  /* BOMBE fixée sur le bord droit de l'écran */
   .mobile-bomb-area {
-    position:absolute;
-    right:8px;
-    bottom:8px;
+    position:fixed;
+    right:10px;
+    bottom:20px;
+    z-index:300;
   }
   .mbtn-bomb-big {
-    width:82px; height:82px;
-    background:rgba(0,0,0,0.6);
-    border:3px solid rgba(255,62,108,0.8);
+    width:88px; height:88px;
+    background:rgba(10,10,20,0.75);
+    border:3px solid rgba(255,62,108,0.9);
     border-radius:50%;
-    color:white; font-size:2.2rem;
+    color:white; font-size:2.4rem;
     cursor:pointer; display:flex; align-items:center; justify-content:center;
     user-select:none; -webkit-user-select:none; touch-action:manipulation;
-    box-shadow:0 0 16px rgba(255,62,108,0.4);
+    box-shadow:0 0 20px rgba(255,62,108,0.5), 0 2px 8px rgba(0,0,0,0.5);
   }
-  .mbtn-bomb-big:active { background:rgba(255,62,108,0.55); transform:scale(0.91); }
+  .mbtn-bomb-big:active {
+    background:rgba(255,62,108,0.6);
+    transform:scale(0.91);
+  }
+}
 
-  /* Quitter — petit bouton en haut à droite */
-  .btn-quit-game {
-    bottom:auto; top:8px; right:8px;
-    font-size:0.24rem; padding:5px 8px;
-    opacity:0.6;
-  }
+/* Portrait mobile — message de rotation */
+@media(max-width:680px) and (orientation:portrait) {
+  body.in-game .game-wrap { display:none; }
 }
 .podium { display:flex; gap:12px; justify-content:center; flex-wrap:wrap; margin:16px 0; }
 .pod-card { background:var(--panel); border:2px solid var(--border); border-radius:4px; padding:14px 18px; text-align:center; min-width:90px; }
@@ -343,19 +340,19 @@ body.in-game .btn-quit-game { display:block; }
         <div class="ov-sub" id="ov-sub">Resultats dans 3s...</div>
         <button class="btn btn-grey" id="btn-menu-ov" style="width:180px;margin-top:8px">MENU</button>
       </div>
-      <!-- Contrôles mobiles en overlay sur les bords du canvas -->
-      <div class="mobile-ctrl" id="mobile-ctrl">
-        <div class="mobile-dpad">
-          <div class="dpad-empty"></div><div class="mbtn" id="mb-up">▲</div><div class="dpad-empty"></div>
-          <div class="mbtn" id="mb-left">◀</div><div class="dpad-empty"></div><div class="mbtn" id="mb-right">▶</div>
-          <div class="dpad-empty"></div><div class="mbtn" id="mb-down">▼</div><div class="dpad-empty"></div>
-        </div>
-        <div class="mobile-bomb-area">
-          <div class="mbtn-bomb-big" id="mb-bomb">💣</div>
-        </div>
-      </div>
     </div>
     <div class="controls-hint"><span>FLECHES/ZQSD</span> MOVE | <span>ESPACE</span> BOMBE</div>
+    <!-- Contrôles mobiles fixed sur les bords de l'écran -->
+    <div class="mobile-ctrl" id="mobile-ctrl">
+      <div class="mobile-dpad">
+        <div class="dpad-empty"></div><div class="mbtn" id="mb-up">▲</div><div class="dpad-empty"></div>
+        <div class="mbtn" id="mb-left">◀</div><div class="dpad-empty"></div><div class="mbtn" id="mb-right">▶</div>
+        <div class="dpad-empty"></div><div class="mbtn" id="mb-down">▼</div><div class="dpad-empty"></div>
+      </div>
+      <div class="mobile-bomb-area">
+        <div class="mbtn-bomb-big" id="mb-bomb">💣</div>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -401,13 +398,10 @@ var ctx=canvas.getContext("2d");
 
 function resizeCanvas(){
   var avW=window.innerWidth-16;
-  var avH=window.innerHeight-120;
+  var avH=window.innerHeight-80;
   var sc=Math.min(avW/W, avH/H, 1);
   var cw=Math.floor(W*sc), ch=Math.floor(H*sc);
   canvas.style.width=cw+"px"; canvas.style.height=ch+"px";
-  // Synchronise l'overlay-wrap pour que les contrôles absolus soient bien positionnés
-  var wrap=document.querySelector(".overlay-wrap");
-  if(wrap){ wrap.style.width=cw+"px"; wrap.style.height=ch+"px"; }
 }
 window.addEventListener("resize",resizeCanvas);
 
